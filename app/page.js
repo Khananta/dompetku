@@ -37,14 +37,20 @@ export default function Home() {
   const [submitLoading, setSubmitLoading] = useState(false);
 
   // 1. SET INITAL DATE & TIME DI FORM
+// 1. SET INITIAL DATE & TIME DI FORM (DIPERBARUI AGAR SELALU AMBIL WAKTU TERBARU)
   const setTodayDateTime = () => {
     const now = new Date();
-    const dateStr = now.toISOString().split("T")[0];
-    const timeStr = now.toTimeString().split(" ")[0].substring(0, 5); // Ambil HH:MM
+    // Menggunakan offset zona waktu lokal agar tanggal yang didapat akurat sesuai HP user
+    const offset = now.getTimezoneOffset() * 60000;
+    const localISOTime = new Date(now.getTime() - offset).toISOString();
+    
+    const dateStr = localISOTime.split("T")[0]; // Menghasilkan format: YYYY-MM-DD
+    const timeStr = now.toTimeString().split(" ")[0].substring(0, 5); // Menghasilkan format: HH:MM
+    
     setFormData((prev) => ({ ...prev, date: dateStr, time: timeStr }));
   };
 
-  // 2. CEK STATUS LOGIN & AMBIL DATA
+  // 2. CEK STATUS LOGIN & AMBIL DATA (DIPERBARUI)
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
@@ -53,11 +59,11 @@ export default function Home() {
         router.push("/login");
       } else {
         setUser(user);
-        setTodayDateTime();
+        setTodayDateTime(); // Set tanggal aktual saat halaman dirender
         await fetchTransactions(user.id);
         
-        // Notifikasi Selamat Datang (hanya sekali saat render pertama berhasil)
-        const displayName = user.email.split("@")[0];
+        // Notifikasi Selamat Datang
+        const displayName = user.user_metadata?.username || user.email.split("@")[0];
         Swal.fire({
           title: `Selamat Datang, ${displayName}!`,
           text: "Mulai catat dan kelola keuanganmu sekarang.",
@@ -72,7 +78,16 @@ export default function Home() {
     };
 
     checkUser();
-  }, [router]);
+
+    // Opsional: Perbarui waktu otomatis jika aplikasi didiamkan terbuka melewati jam 00.00
+    const intervalWaktu = setInterval(() => {
+      if (!isEditingId) {
+        setTodayDateTime();
+      }
+    }, 60000); // Cek setiap 1 menit
+
+    return () => clearInterval(intervalWaktu);
+  }, [router, isEditingId]);
 
   // Set ulang tanggal dan waktu form jika tipe transaksi berubah
   useEffect(() => {
@@ -447,26 +462,26 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Grid Input Tanggal & Waktu Manual (Request No. 3 & 4) */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
+                {/* Grid Input Tanggal & Waktu Manual (Sangat Responsif & Estetis di Mobile) */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
                     <label className="block text-xs font-semibold text-slate-500 mb-1">Tanggal</label>
                     <input
                       type="date"
                       required
                       value={formData.date}
                       onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-900 transition-all font-medium"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-900 transition-all font-medium"
                     />
                   </div>
-                  <div>
+                  <div className="w-full sm:w-36">
                     <label className="block text-xs font-semibold text-slate-500 mb-1">Waktu / Jam</label>
                     <input
                       type="time"
                       required
                       value={formData.time}
                       onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-900 transition-all font-medium"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-900 transition-all font-medium"
                     />
                   </div>
                 </div>
