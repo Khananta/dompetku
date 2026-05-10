@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase";
 import Swal from "sweetalert2";
@@ -13,15 +13,16 @@ export default function Home() {
   // State User & Loading
   const [user, setUser] = useState(null);
   const [pageLoading, setPageLoading] = useState(true);
+  const [submitLoading, setSubmitLoading] = useState(false);
 
   // State Data Keuangan
   const [transactions, setTransactions] = useState([]);
-  const [isEditingId, setIsEditingId] = useState(null); // Menyimpan ID transaksi yang sedang diedit
+  const [isEditingId, setIsEditingId] = useState(null);
 
-  // State Form Input (Sekarang mendukung Tanggal dan Waktu)
+  // State Form Input (Mendukung format string rupiah yang aman)
   const [formData, setFormData] = useState({
     type: "pengeluaran",
-    amount: "",
+    amount: "", // Menggunakan string terformat (contoh: "75.000")
     category: "Makanan",
     note: "",
     date: "", // Format: YYYY-MM-DD
@@ -34,23 +35,25 @@ export default function Home() {
   const [endDate, setEndDate] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(""); // Format: YYYY-MM
 
-  const [submitLoading, setSubmitLoading] = useState(false);
-
-  // 1. SET INITAL DATE & TIME DI FORM
-// 1. SET INITIAL DATE & TIME DI FORM (DIPERBARUI AGAR SELALU AMBIL WAKTU TERBARU)
+  // ==========================================
+  // 1. SET INITIAL DATE & TIME (FIX BUG TANGGAL)
+  // ==========================================
   const setTodayDateTime = () => {
+    if (isEditingId) return; // Kunci otomatisasi jika sedang mengedit!
+
     const now = new Date();
-    // Menggunakan offset zona waktu lokal agar tanggal yang didapat akurat sesuai HP user
     const offset = now.getTimezoneOffset() * 60000;
     const localISOTime = new Date(now.getTime() - offset).toISOString();
     
-    const dateStr = localISOTime.split("T")[0]; // Menghasilkan format: YYYY-MM-DD
-    const timeStr = now.toTimeString().split(" ")[0].substring(0, 5); // Menghasilkan format: HH:MM
+    const dateStr = localISOTime.split("T")[0]; // YYYY-MM-DD
+    const timeStr = now.toTimeString().split(" ")[0].substring(0, 5); // HH:MM
     
     setFormData((prev) => ({ ...prev, date: dateStr, time: timeStr }));
   };
 
-  // 2. CEK STATUS LOGIN & AMBIL DATA (DIPERBARUI)
+  // ==========================================
+  // 2. CEK STATUS LOGIN & INITIAL LOAD
+  // ==========================================
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
@@ -59,8 +62,24 @@ export default function Home() {
         router.push("/login");
       } else {
         setUser(user);
-        setTodayDateTime(); // Set tanggal aktual saat halaman dirender
+        
+        // Ambil data transaksi
         await fetchTransactions(user.id);
+        
+        // Set tanggal hari ini pertama kali
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        const localISOTime = new Date(now.getTime() - offset).toISOString();
+        setFormData((prev) => ({
+          ...prev,
+          date: localISOTime.split("T")[0],
+          time: now.toTimeString().split(" ")[0].substring(0, 5),
+        }));
+
+        // Set default bulan aktif ke bulan sekarang
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        setSelectedMonth(`${yyyy}-${mm}`);
         
         // Notifikasi Selamat Datang
         const displayName = user.user_metadata?.username || user.email.split("@")[0];
@@ -78,25 +97,25 @@ export default function Home() {
     };
 
     checkUser();
+  }, [router]);
 
-    // Opsional: Perbarui waktu otomatis jika aplikasi didiamkan terbuka melewati jam 00.00
-    const intervalWaktu = setInterval(() => {
-      if (!isEditingId) {
-        setTodayDateTime();
-      }
-    }, 60000); // Cek setiap 1 menit
+  // Jalankan interval update waktu otomatis
+  useEffect(() => {
+    if (isEditingId) return;
+    const interval = setInterval(setTodayDateTime, 60000);
+    return () => clearInterval(interval);
+  }, [isEditingId]);
 
-    return () => clearInterval(intervalWaktu);
-  }, [router, isEditingId]);
-
-  // Set ulang tanggal dan waktu form jika tipe transaksi berubah
+  // Hindari overwrite ketika tipe transaksi berubah
   useEffect(() => {
     if (!isEditingId) {
       setTodayDateTime();
     }
-  }, [formData.type]);
+  }, [formData.type, isEditingId]);
 
+  // ==========================================
   // 3. AMBIL DATA TRANSAKSI
+  // ==========================================
   const fetchTransactions = async (userId) => {
     try {
       const { data, error } = await supabase
@@ -108,28 +127,54 @@ export default function Home() {
       if (error) throw error;
       setTransactions(data || []);
     } catch (error) {
-      Swal.fire("Error", "Gagal mengambil data: " + error.message, "error");
+      console.error("Gagal mengambil data:", error.message);
     }
   };
 
-  // 4. SIMPAN / UPDATE TRANSAKSI
+  // ==========================================
+  // 4. FORMATTING RUPIAH DI INPUT
+  // ==========================================
+  const handleAmountChange = (e) => {
+    const rawValue = e.target.value;
+    const cleanNumber = rawValue.replace(/\D/g, ""); // Bersihkan non-angka
+    
+    if (!cleanNumber) {
+      setFormData((prev) => ({ ...prev, amount: "" }));
+      return;
+    }
+
+    const formatted = new Intl.NumberFormat("id-ID").format(cleanNumber);
+    setFormData((prev) => ({ ...prev, amount: formatted }));
+  };
+
+  // ==========================================
+  // 5. SIMPAN / UPDATE TRANSAKSI
+  // ==========================================
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.amount || submitLoading) return;
+    
+    const rawAmount = String(formData.amount);
+    const cleanAmountStr = rawAmount.replace(/\D/g, "");
+    const parsedAmount = Math.round(Number(cleanAmountStr));
 
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      Swal.fire("Gagal!", "Nominal transaksi harus berupa angka valid.", "error");
+      return;
+    }
+
+    if (submitLoading) return;
     setSubmitLoading(true);
 
-    // Gabungkan input tanggal & waktu menjadi format timestamp ISO
     const combinedTimestamp = new Date(`${formData.date}T${formData.time}:00`).toISOString();
 
     try {
       if (isEditingId) {
-        // PROSES EDIT DATA
+        // PROSES UPDATE DATA
         const { data, error } = await supabase
           .from("transaksi")
           .update({
             type: formData.type,
-            amount: parseFloat(formData.amount),
+            amount: parsedAmount,
             category: formData.category,
             note: formData.note || null,
             created_at: combinedTimestamp,
@@ -139,7 +184,6 @@ export default function Home() {
 
         if (error) throw error;
 
-        // Update local state agar instan berubah
         setTransactions(transactions.map(t => t.id === isEditingId ? data[0] : t));
         setIsEditingId(null);
 
@@ -151,14 +195,14 @@ export default function Home() {
           showConfirmButton: false,
         });
       } else {
-        // PROSES TAMBAH DATA BARU
+        // PROSES SIMPAN DATA BARU
         const { data, error } = await supabase
           .from("transaksi")
           .insert([
             {
               user_id: user.id,
               type: formData.type,
-              amount: parseFloat(formData.amount),
+              amount: parsedAmount,
               category: formData.category,
               note: formData.note || null,
               created_at: combinedTimestamp,
@@ -179,7 +223,6 @@ export default function Home() {
         });
       }
 
-      // Reset form
       setFormData({
         type: "pengeluaran",
         amount: "",
@@ -188,6 +231,7 @@ export default function Home() {
         date: "",
         time: "",
       });
+      setIsEditingId(null);
       setTodayDateTime();
 
     } catch (error) {
@@ -197,27 +241,33 @@ export default function Home() {
     }
   };
 
-  // 5. TRIGGER EDIT MODE
+  // ==========================================
+  // 6. TRIGGER EDIT MODE
+  // ==========================================
   const startEdit = (item) => {
     setIsEditingId(item.id);
+    
     const itemDate = new Date(item.created_at);
-    const dateStr = itemDate.toISOString().split("T")[0];
+    const offset = itemDate.getTimezoneOffset() * 60000;
+    const localISO = new Date(itemDate.getTime() - offset).toISOString();
+    
+    const dateStr = localISO.split("T")[0];
     const timeStr = itemDate.toTimeString().split(" ")[0].substring(0, 5);
+
+    const formattedAmount = new Intl.NumberFormat("id-ID").format(item.amount);
 
     setFormData({
       type: item.type,
-      amount: item.amount,
+      amount: formattedAmount,
       category: item.category,
       note: item.note || "",
       date: dateStr,
       time: timeStr,
     });
 
-    // Scroll mulus kembali ke form input di device mobile
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Batal Edit
   const cancelEdit = () => {
     setIsEditingId(null);
     setFormData({
@@ -231,15 +281,17 @@ export default function Home() {
     setTodayDateTime();
   };
 
-  // 6. HAPUS TRANSAKSI (DENGAN SWEETALERT CONFIRM)
+  // ==========================================
+  // 7. HAPUS DATA TRANSAKSI
+  // ==========================================
   const handleDelete = async (id) => {
     Swal.fire({
       title: "Apakah kamu yakin?",
       text: "Catatan keuangan ini akan dihapus permanen!",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#64748b",
       confirmButtonText: "Ya, Hapus!",
       cancelButtonText: "Batal",
     }).then(async (result) => {
@@ -257,6 +309,10 @@ export default function Home() {
             timer: 1500,
             showConfirmButton: false,
           });
+
+          if (isEditingId === id) {
+            cancelEdit();
+          }
         } catch (error) {
           Swal.fire("Error", "Gagal menghapus data: " + error.message, "error");
         }
@@ -264,7 +320,9 @@ export default function Home() {
     });
   };
 
-  // 7. LOGOUT
+  // ==========================================
+  // 8. LOGOUT HANDLER
+  // ==========================================
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -283,37 +341,62 @@ export default function Home() {
     }
   };
 
-  // Saring transaksi berdasarkan Filter yang dipilih aktif
-  const filteredTransactions = transactions.filter((item) => {
-    const itemDateStr = item.created_at ? item.created_at.split("T")[0] : "";
-    
-    if (filterType === "hari-ini") {
-      const todayStr = new Date().toISOString().split("T")[0];
-      return itemDateStr === todayStr;
-    }
-    
-    if (filterType === "kustom" && startDate && endDate) {
-      return itemDateStr >= startDate && itemDateStr <= endDate;
-    }
+  // ==========================================
+  // 9. LOGIKA FILTER HISTORI
+  // ==========================================
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((item) => {
+      const itemDate = new Date(item.created_at);
+      const offset = itemDate.getTimezoneOffset() * 60000;
+      const itemDateStr = new Date(itemDate.getTime() - offset).toISOString().split("T")[0];
+      
+      if (filterType === "hari-ini") {
+        const sekarang = new Date();
+        const localOffset = sekarang.getTimezoneOffset() * 60000;
+        const todayStr = new Date(sekarang.getTime() - localOffset).toISOString().split("T")[0];
+        
+        return itemDateStr === todayStr;
+      }
+      
+      if (filterType === "kustom") {
+        if (!startDate && !endDate) return true;
+        if (startDate && endDate) {
+          return itemDateStr >= startDate && itemDateStr <= endDate;
+        }
+        if (startDate) return itemDateStr >= startDate;
+        if (endDate) return itemDateStr <= endDate;
+      }
 
-    if (filterType === "bulanan" && selectedMonth) {
-      // selectedMonth format: YYYY-MM, itemDateStr format: YYYY-MM-DD
-      return itemDateStr.substring(0, 7) === selectedMonth;
-    }
+      if (filterType === "bulanan" && selectedMonth) {
+        return itemDateStr.substring(0, 7) === selectedMonth;
+      }
 
-    return true; // "semua"
-  });
+      return true; // "semua"
+    });
+  }, [transactions, filterType, startDate, endDate, selectedMonth]);
 
-  // Kalkulasi data kartu dinamis (hanya menghitung transaksi hasil filter aktif)
-  const totalPemasukan = filteredTransactions
-    .filter((t) => t.type === "pemasukan")
-    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+  // Kalkulasi data kartu dinamis
+  const totalPemasukan = useMemo(() => {
+    return filteredTransactions
+      .filter((t) => t.type === "pemasukan")
+      .reduce((sum, t) => sum + Math.round(Number(t.amount)), 0);
+  }, [filteredTransactions]);
 
-  const totalPengeluaran = filteredTransactions
-    .filter((t) => t.type === "pengeluaran")
-    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+  const totalPengeluaran = useMemo(() => {
+    return filteredTransactions
+      .filter((t) => t.type === "pengeluaran")
+      .reduce((sum, t) => sum + Math.round(Number(t.amount)), 0);
+  }, [filteredTransactions]);
 
-  const saldo = totalPemasukan - totalPengeluaran;
+  const saldo = useMemo(() => totalPemasukan - totalPengeluaran, [totalPemasukan, totalPengeluaran]);
+
+  const formatRupiah = (num) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0,
+    }).format(num);
+  };
 
   if (pageLoading) {
     return (
@@ -326,18 +409,24 @@ export default function Home() {
     );
   }
 
-  // Mengambil nama depan saja dari email (Request No. 6)
   const displayName = user?.user_metadata?.username || (user?.email ? user.email.split("@")[0] : "User");
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
       {/* HEADER / NAVBAR */}
-      <header className="bg-white border-b border-slate-100 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+      <header className="bg-white border-b border-slate-100 sticky top-0 z-20">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md shadow-blue-200">
-              D
-            </div>
+            {/* SINKRONISASI LOGO DENGAN FAVICON.ICO */}
+            <img 
+              src="/favicon.ico" 
+              alt="Logo DompetKu" 
+              className="w-10 h-10 object-contain rounded-xl shadow-md shadow-blue-100"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'%3E%3Cpath d='M21 18V6c0-1.1-.9-2-2-2H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2zm-9-2c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z'/%3E%3C/svg%3E";
+              }}
+            />
             <div>
               <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">
                 Dompet<span className="text-blue-600">Ku</span>
@@ -351,7 +440,7 @@ export default function Home() {
             </span>
             <button
               onClick={handleLogout}
-              className="px-4 py-1.5 text-xs font-semibold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+              className="px-4 py-1.5 text-xs font-semibold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-100"
             >
               Keluar
             </button>
@@ -359,8 +448,8 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 mt-8">
-        {/* SECTION 1: RINGKASAN KARTU KEUANGAN (Animasi Masuk) */}
+      <main className="max-w-6xl mx-auto px-4 mt-8">
+        {/* RINGKASAN KARTU KEUANGAN */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }} 
           animate={{ opacity: 1, y: 0 }} 
@@ -370,16 +459,16 @@ export default function Home() {
           {/* Kartu Saldo */}
           <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl text-white shadow-xl shadow-blue-100">
             <p className="text-sm text-blue-100 font-medium">Saldo (Sesuai Filter)</p>
-            <h3 className="text-3xl font-bold mt-1">
-              {saldo < 0 ? "-" : ""} Rp {Math.abs(saldo).toLocaleString("id-ID")}
+            <h3 className="text-3xl font-extrabold mt-1">
+              {saldo < 0 ? "-" : ""} {formatRupiah(Math.abs(saldo))}
             </h3>
           </div>
 
           {/* Kartu Pemasukan */}
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Pemasukan</p>
-              <h4 className="text-xl font-bold text-emerald-600 mt-1">Rp {totalPemasukan.toLocaleString("id-ID")}</h4>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Pemasukan</p>
+              <h4 className="text-xl font-bold text-emerald-600 mt-1">{formatRupiah(totalPemasukan)}</h4>
             </div>
             <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 font-bold text-lg">
               ↓
@@ -389,8 +478,8 @@ export default function Home() {
           {/* Kartu Pengeluaran */}
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Pengeluaran</p>
-              <h4 className="text-xl font-bold text-rose-600 mt-1">Rp {totalPengeluaran.toLocaleString("id-ID")}</h4>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Pengeluaran</p>
+              <h4 className="text-xl font-bold text-rose-600 mt-1">{formatRupiah(totalPengeluaran)}</h4>
             </div>
             <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center text-rose-600 font-bold text-lg">
               ↑
@@ -398,155 +487,159 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* SECTION 2: FORM INPUT & HISTORI */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Sisi Kiri: Form Catat Transaksi */}
-          <div className="lg:col-span-5">
-            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm sticky top-24">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-slate-800">
-                  {isEditingId ? "📝 Edit Transaksi" : "✍️ Catat Keuangan"}
-                </h3>
-                {isEditingId && (
-                  <button 
-                    onClick={cancelEdit} 
-                    className="text-xs font-bold text-slate-400 hover:text-slate-600 bg-slate-100 px-2 py-1 rounded"
-                  >
-                    Batal Edit
-                  </button>
-                )}
-              </div>
-              
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Switcher Tipe Transaksi */}
-                <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl">
+        {/* ==========================================
+        // GRID LAYOUT: STICKY FORM & SCROLLABLE LIST SEJAJAR SEMPURNA
+        // ========================================== */}
+        <div className="flex flex-col lg:flex-row gap-8 items-stretch">
+          
+          {/* SISI KIRI: INPUT FORM */}
+          <div className="w-full lg:w-[42%] shrink-0">
+            <div id="form-card" className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-full flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-md font-bold text-slate-800">
+                    {isEditingId ? "📝 Edit Transaksi" : "✍️ Catat Keuangan"}
+                  </h3>
+                  {isEditingId && (
+                    <button 
+                      onClick={cancelEdit} 
+                      className="text-xs font-bold text-rose-500 hover:text-rose-700 bg-rose-50 px-2 py-1 rounded"
+                    >
+                      Batal Edit
+                    </button>
+                  )}
+                </div>
+                
+                <form id="finance-form" onSubmit={handleSubmit} className="space-y-4">
+                  {/* Switcher Tipe Transaksi */}
+                  <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl">
+                    <button
+                      type="button"
+                      disabled={isEditingId !== null}
+                      onClick={() => setFormData({ ...formData, type: "pengeluaran", category: "Makanan" })}
+                      className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+                        formData.type === "pengeluaran"
+                          ? "bg-white text-rose-600 shadow-sm"
+                          : "text-slate-500 hover:text-slate-800"
+                      } disabled:opacity-50`}
+                    >
+                      Pengeluaran
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isEditingId !== null}
+                      onClick={() => setFormData({ ...formData, type: "pemasukan", category: "Gaji" })}
+                      className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+                        formData.type === "pemasukan"
+                          ? "bg-white text-emerald-600 shadow-sm"
+                          : "text-slate-500 hover:text-slate-800"
+                      } disabled:opacity-50`}
+                    >
+                      Pemasukan
+                    </button>
+                  </div>
+
+                  {/* Input Jumlah Rupiah */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Nominal (Rupiah)</label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rp</span>
+                      <input
+                        type="text"
+                        placeholder="0"
+                        required
+                        value={formData.amount}
+                        onChange={handleAmountChange}
+                        className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-900 font-bold transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Grid Input Tanggal & Waktu */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Tanggal</label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.date}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-900 transition-all font-medium"
+                      />
+                    </div>
+                    <div className="w-full sm:w-36">
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Waktu / Jam</label>
+                      <input
+                        type="time"
+                        required
+                        value={formData.time}
+                        onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-900 transition-all font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Dropdown Kategori */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Kategori</label>
+                    <select
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-700 font-medium transition-all"
+                    >
+                      {formData.type === "pengeluaran" ? (
+                        <>
+                          <option value="Makanan">Makanan & Minuman</option>
+                          <option value="Transport">Transportasi</option>
+                          <option value="Tagihan">Tagihan & Langganan</option>
+                          <option value="Hiburan">Hiburan & Jajan</option>
+                          <option value="Lainnya">Lain-lain</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="Gaji">Gaji / Upah</option>
+                          <option value="Kiriman">Kiriman Bulanan</option>
+                          <option value="Sampingan">Freelance / Bisnis</option>
+                          <option value="Lainnya">Lain-lain</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+
+                  {/* Input Keterangan */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Keterangan / Catatan</label>
+                    <textarea
+                      placeholder="Catat rincian transaksi disini..."
+                      rows="2"
+                      value={formData.note}
+                      onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-700 font-medium transition-all resize-none"
+                    ></textarea>
+                  </div>
+
+                  {/* Tombol Simpan */}
                   <button
-                    type="button"
-                    disabled={isEditingId !== null} // Kunci tipe data jika sedang mengedit agar konsisten
-                    onClick={() => setFormData({ ...formData, type: "pengeluaran", category: "Makanan" })}
-                    className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+                    type="submit"
+                    disabled={submitLoading}
+                    className={`w-full py-3 text-white rounded-xl font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2 ${
                       formData.type === "pengeluaran"
-                        ? "bg-white text-rose-600 shadow-sm"
-                        : "text-slate-500 hover:text-slate-800"
+                        ? "bg-rose-500 hover:bg-rose-600 shadow-rose-100"
+                        : "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-100"
                     } disabled:opacity-50`}
                   >
-                    Pengeluaran
+                    {submitLoading ? "Menyimpan..." : isEditingId ? "Simpan Perubahan" : "Simpan Catatan"}
                   </button>
-                  <button
-                    type="button"
-                    disabled={isEditingId !== null}
-                    onClick={() => setFormData({ ...formData, type: "pemasukan", category: "Gaji" })}
-                    className={`py-2 text-sm font-semibold rounded-lg transition-all ${
-                      formData.type === "pemasukan"
-                        ? "bg-white text-emerald-600 shadow-sm"
-                        : "text-slate-500 hover:text-slate-800"
-                    } disabled:opacity-50`}
-                  >
-                    Pemasukan
-                  </button>
-                </div>
-
-                {/* Input Jumlah */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Nominal (Rupiah)</label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">Rp</span>
-                    <input
-                      type="number"
-                      placeholder="0"
-                      required
-                      value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-900 font-medium transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Grid Input Tanggal & Waktu Manual (Sangat Responsif & Estetis di Mobile) */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="flex-1">
-                    <label className="block text-xs font-semibold text-slate-500 mb-1">Tanggal</label>
-                    <input
-                      type="date"
-                      required
-                      value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-900 transition-all font-medium"
-                    />
-                  </div>
-                  <div className="w-full sm:w-36">
-                    <label className="block text-xs font-semibold text-slate-500 mb-1">Waktu / Jam</label>
-                    <input
-                      type="time"
-                      required
-                      value={formData.time}
-                      onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-900 transition-all font-medium"
-                    />
-                  </div>
-                </div>
-
-                {/* Input Kategori */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Kategori</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-900 font-medium transition-all"
-                  >
-                    {formData.type === "pengeluaran" ? (
-                      <>
-                        <option value="Makanan">Makanan & Minuman</option>
-                        <option value="Transport">Transportasi</option>
-                        <option value="Tagihan">Tagihan & Langganan</option>
-                        <option value="Hiburan">Hiburan & Jajan</option>
-                        <option value="Lainnya">Lain-lain</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="Gaji">Gaji / Upah</option>
-                        <option value="Kiriman">Kiriman Bulanan</option>
-                        <option value="Sampingan">Freelance / Bisnis</option>
-                        <option value="Lainnya">Lain-lain</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-
-                {/* Input Keterangan */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Keterangan / Catatan</label>
-                  <textarea
-                    placeholder="Catat rincian transaksi disini..."
-                    rows="2"
-                    value={formData.note}
-                    onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-900 font-medium transition-all resize-none"
-                  ></textarea>
-                </div>
-
-                {/* Tombol Simpan */}
-                <button
-                  type="submit"
-                  disabled={submitLoading}
-                  className={`w-full py-3 text-white rounded-xl font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2 ${
-                    formData.type === "pengeluaran"
-                      ? "bg-rose-500 hover:bg-rose-600 shadow-rose-100"
-                      : "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-100"
-                  } disabled:opacity-50`}
-                >
-                  {submitLoading ? "Menyimpan..." : isEditingId ? "Simpan Perubahan" : "Simpan Catatan"}
-                </button>
-              </form>
+                </form>
+              </div>
             </div>
           </div>
 
-          {/* Sisi Kanan: Histori Transaksi */}
-          <div className="lg:col-span-7">
-            {/* Filter Tabs Multi-Opsi (Request No. 7 & 8) */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-6 space-y-4">
+          {/* SISI KANAN: HISTORI TRANSAKSI (Sejajar Sempurna Secara Vertikal) */}
+          <div className="w-full lg:flex-1 flex flex-col justify-between min-h-0">
+            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-4 mb-4 shrink-0">
               <div className="flex flex-wrap justify-between items-center gap-3">
-                <h3 className="text-md font-bold text-slate-800">Saring Histori & Rekap</h3>
+                <h3 className="text-sm font-bold text-slate-700">Saring Histori & Rekap</h3>
                 <div className="flex flex-wrap bg-slate-100 p-1 rounded-xl text-xs font-semibold gap-1">
                   <button
                     onClick={() => setFilterType("hari-ini")}
@@ -597,7 +690,7 @@ export default function Home() {
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none"
                     />
                   </div>
                   <div>
@@ -606,7 +699,7 @@ export default function Home() {
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none"
                     />
                   </div>
                 </motion.div>
@@ -625,14 +718,14 @@ export default function Home() {
                     type="month"
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none"
                   />
                 </motion.div>
               )}
             </div>
 
-            {/* List Transaksi dengan Animasi Framer Motion (Request No. 5) */}
-            <div className="space-y-3">
+            {/* LIST DAFTAR TRANSAKSI (SCROLLABLE CONTAINER - SEJAJAR SEMPURNA ATAS-BAWAH) */}
+            <div className="flex-1 min-h-[442px] max-h-[442px] overflow-y-auto pr-1 space-y-3 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
               <AnimatePresence mode="popLayout">
                 {filteredTransactions.map((item) => {
                   const itemTime = item.created_at 
@@ -642,7 +735,7 @@ export default function Home() {
                     ? new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) 
                     : "";
 
-                    return (
+                  return (
                     <motion.div
                       key={item.id}
                       layout
@@ -652,7 +745,7 @@ export default function Home() {
                       transition={{ duration: 0.3 }}
                       className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:shadow-md transition-shadow"
                     >
-                      {/* Sisi Kiri: Detail Kategori & Catatan */}
+                      {/* Detail Kategori & Catatan */}
                       <div className="flex items-center gap-3">
                         <div
                           className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
@@ -664,7 +757,7 @@ export default function Home() {
                           {item.category[0]}
                         </div>
                         <div>
-                          <h4 className="font-bold text-slate-800 text-sm">{item.category}</h4>
+                          <h4 className="font-bold text-slate-800 text-sm leading-snug">{item.category}</h4>
                           <p className="text-xs text-slate-400 font-medium">
                             {item.note || "-"} •{" "}
                             <span className="text-slate-400 font-semibold">{itemDateStr} ({itemTime})</span>
@@ -672,7 +765,7 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {/* Sisi Kanan: Nominal & Tombol Aksi (Tampil Permanen & Responsif) */}
+                      {/* Nominal & Tombol Aksi */}
                       <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-2.5 sm:pt-0 border-slate-100">
                         {/* Nominal Uang */}
                         <span
@@ -680,31 +773,24 @@ export default function Home() {
                             item.type === "pemasukan" ? "text-emerald-600" : "text-rose-600"
                           }`}
                         >
-                          {item.type === "pemasukan" ? "+" : "-"} Rp {parseFloat(item.amount).toLocaleString("id-ID")}
+                          {item.type === "pemasukan" ? "+" : "-"} {formatRupiah(item.amount)}
                         </span>
 
-                        {/* Tombol Aksi - Selalu Tampil Permanen */}
+                        {/* Tombol Kontrol */}
                         <div className="flex items-center gap-1">
-                          {/* Tombol Edit */}
                           <button
                             onClick={() => startEdit(item)}
                             className="p-2 text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-blue-100 rounded-lg transition-colors"
                             aria-label="Edit Catatan"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                            </svg>
+                            ✏️
                           </button>
-                          
-                          {/* Tombol Hapus */}
                           <button
                             onClick={() => handleDelete(item.id)}
                             className="p-2 text-slate-500 hover:text-rose-600 bg-slate-50 hover:bg-rose-100 rounded-lg transition-colors"
                             aria-label="Hapus Catatan"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                            </svg>
+                            🗑️
                           </button>
                         </div>
                       </div>
@@ -723,6 +809,7 @@ export default function Home() {
                 </motion.div>
               )}
             </div>
+
           </div>
         </div>
       </main>
