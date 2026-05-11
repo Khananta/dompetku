@@ -54,6 +54,9 @@ export default function Home() {
   // ==========================================
   // 2. CEK STATUS LOGIN & INITIAL LOAD
   // ==========================================
+  // ==========================================
+  // 2. CEK STATUS LOGIN & INITIAL LOAD (FIX BUG SPAM ALERT)
+  // ==========================================
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
@@ -81,17 +84,24 @@ export default function Home() {
         const mm = String(now.getMonth() + 1).padStart(2, '0');
         setSelectedMonth(`${yyyy}-${mm}`);
         
-        // Notifikasi Selamat Datang
-        const displayName = user.user_metadata?.username || user.email.split("@")[0];
-        Swal.fire({
-          title: `Selamat Datang, ${displayName}!`,
-          text: "Mulai catat dan kelola keuanganmu sekarang.",
-          icon: "success",
-          timer: 2000,
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end"
-        });
+        // FIX: Hanya tampilkan selamat datang SEKALI per sesi browser
+        const hasWelcomed = sessionStorage.getItem("welcomed_dompetku");
+        
+        if (!hasWelcomed) {
+          const displayName = user.user_metadata?.username || user.email.split("@")[0];
+          Swal.fire({
+            title: `Selamat Datang, ${displayName}!`,
+            text: "Mulai catat dan kelola keuanganmu sekarang.",
+            icon: "success",
+            timer: 2000,
+            showConfirmButton: false,
+            toast: true,
+            position: "top-end"
+          });
+          
+          // Tandai bahwa user sudah disambut
+          sessionStorage.setItem("welcomed_dompetku", "true");
+        }
       }
       setPageLoading(false);
     };
@@ -321,13 +331,16 @@ export default function Home() {
   };
 
   // ==========================================
-  // 8. LOGOUT HANDLER
+  // 8. LOGOUT HANDLER (HAPUS SESI SELAMAT DATANG)
   // ==========================================
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       Swal.fire("Error", "Gagal keluar: " + error.message, "error");
     } else {
+      // Reset penanda selamat datang agar saat login lagi alert muncul kembali
+      sessionStorage.removeItem("welcomed_dompetku");
+      
       Swal.fire({
         title: "Berhasil Keluar",
         text: "Sampai jumpa kembali!",
