@@ -20,7 +20,7 @@ export default function LoginPage() {
   // ==========================================
   // HANDLER MASUK (LOGIN SAJA)
   // ==========================================
-  const handleLogin = async (e) => {
+const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
 
@@ -44,22 +44,12 @@ export default function LoginPage() {
         throw new Error("KREDENSIAL_SALAH");
       }
 
-      // 3. Tampilkan Alert Berhasil
-      Swal.fire({
-        title: "Login Berhasil!",
-        text: "Selamat mengelola keuanganmu kembali!",
-        icon: "success",
-        timer: 1500,
-        showConfirmButton: false,
-      }).then(() => {
-        router.push("/");
-        router.refresh();
-      });
+      // 3. LANGSUNG MASUK KE DASHBOARD (TANPA POP-UP ALERT)
+      router.push("/");
+      router.refresh();
 
     } catch (error) {
-      // ==========================================
-      // PENANGANAN ERROR ALERT (SWEETALERT)
-      // ==========================================
+      // Penanganan error (SweetAlert Gagal) tetap dipertahankan agar tahu jika salah ketik
       let errorTitle = "Gagal!";
       let errorMessage = error.message;
 
@@ -69,8 +59,6 @@ export default function LoginPage() {
       } else if (error.message === "KREDENSIAL_SALAH") {
         errorTitle = "Login Gagal!";
         errorMessage = "Email tidak terdaftar atau kata sandi yang kamu masukkan salah. Periksa kembali ketikanmu!";
-      } else {
-        errorMessage = error.message;
       }
 
       Swal.fire({
