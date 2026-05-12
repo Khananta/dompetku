@@ -109,6 +109,58 @@ export default function Home() {
     checkUser();
   }, [router]);
 
+  // ==========================================
+  // FIX: OTOMATIS LOGOUT JIKA INAKTIF 15 MENIT
+  // ==========================================
+  useEffect(() => {
+    // Batas waktu inaktif (Contoh: 15 menit = 15 * 60 * 1000 ms)
+    // Untuk uji coba cepat, kamu bisa ganti ke 10000 (10 detik)
+    const TIMEOUT_INAKTIF = 15 * 60 * 1000; 
+    let timerMundur;
+
+    const resetTimerLogout = () => {
+      // Hapus timer lama jika user melakukan aktivitas baru
+      if (timerMundur) clearTimeout(timerMundur);
+
+      // Set ulang timer mundur untuk logout otomatis
+      timerMundur = setTimeout(async () => {
+        if (user) {
+          await supabase.auth.signOut();
+          sessionStorage.removeItem("welcomed_dompetku");
+          
+          Swal.fire({
+            title: "Sesi Berakhir",
+            text: "Kamu otomatis keluar karena tidak ada aktivitas beberapa saat.",
+            icon: "info",
+            confirmButtonColor: "#3b82f6"
+          }).then(() => {
+            router.push("/login");
+            router.refresh();
+          });
+        }
+      }, TIMEOUT_INAKTIF);
+    };
+
+    // Daftar interaksi yang menandakan user masih aktif (mouse, keyboard, scroll, layar HP)
+    const eventInteraksi = ["mousedown", "mousemove", "keypress", "scroll", "touchstart"];
+
+    // Jalankan deteksi awal saat halaman dimuat
+    resetTimerLogout();
+
+    // Pasang event listener ke window browser
+    eventInteraksi.forEach((event) => {
+      window.addEventListener(event, resetTimerLogout);
+    });
+
+    // Cleanup: Bersihkan listener dan timer saat komponen di-unmount
+    return () => {
+      if (timerMundur) clearTimeout(timerMundur);
+      eventInteraksi.forEach((event) => {
+        window.removeEventListener(event, resetTimerLogout);
+      });
+    };
+  }, [user, router, supabase]);
+
   // Jalankan interval update waktu otomatis
   useEffect(() => {
     if (isEditingId) return;
@@ -330,15 +382,15 @@ export default function Home() {
     });
   };
 
-  // ==========================================
-  // 8. LOGOUT HANDLER (HAPUS SESI SELAMAT DATANG)
+// ==========================================
+  // 8. LOGOUT HANDLER
   // ==========================================
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       Swal.fire("Error", "Gagal keluar: " + error.message, "error");
     } else {
-      // Reset penanda selamat datang agar saat login lagi alert muncul kembali
+      // Tambahkan baris ini agar flag selamat datang terhapus saat logout manual
       sessionStorage.removeItem("welcomed_dompetku");
       
       Swal.fire({
