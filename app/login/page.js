@@ -228,7 +228,7 @@ export default function LoginPage() {
 
         {/* Footer Brand info */}
         <div className="flex items-center justify-between text-xs text-slate-500 z-10 border-t border-slate-900 pt-6">
-          <span>&copy; {new Date().getFullYear()} DompetKu Team.</span>
+          <span>&copy; {new Date().getFullYear()} DompetKu - Powered By Khananta</span>
           <div className="flex gap-4">
             <span className="hover:text-slate-400 cursor-pointer">Bantuan</span>
             <span className="hover:text-slate-400 cursor-pointer">Privasi</span>
