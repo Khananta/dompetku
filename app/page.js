@@ -3791,16 +3791,16 @@ Yuk, bayar patungannya ya! Terima kasih.`;
             <div className="max-w-4xl mx-auto space-y-6">
               
               {/* HEADER KALENDER (Bulan & Tahun Navigasi) */}
-              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between transition-colors duration-300">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">📅</span>
-                  <div>
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors duration-300">
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                  <span className="text-xl shrink-0">📅</span>
+                  <div className="min-w-0">
                     <h3 className="font-bold text-slate-800 dark:text-white text-sm">Visualisasi Kalender Transaksi</h3>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">Lihat ringkasan arus kas masuk dan keluar Anda dalam format grid kalender bulanan.</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium leading-normal">Lihat ringkasan arus kas masuk dan keluar Anda dalam format grid kalender bulanan.</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="flex items-center justify-center md:justify-end gap-1.5 sm:gap-2 w-full md:w-auto flex-wrap shrink-0">
                   <button
                     type="button"
                     onClick={() => setCalendarCurrentDate(new Date(calendarCurrentDate.getFullYear(), calendarCurrentDate.getMonth() - 1, 1))}
