@@ -14,7 +14,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="id" className={`${jakarta.variable}`}>
+    <html lang="id" className={`${jakarta.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
