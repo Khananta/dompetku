@@ -3,232 +3,98 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #1e293b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-jakarta), system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-jakarta), system-ui, -apple-system, sans-serif;
-  letter-spacing: 0.025em; /* Spasi antar huruf yang lebih renggang dan clean */
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ==========================================
-// SWEETALERT2 MODERN & ROUNDED OVERRIDES
+// SCROLLBAR MINIMALIS
+// ========================================== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ==========================================
+// SWEETALERT2 MODERN MINIMALIS (CLEAN LIGHT)
 // ========================================== */
 .swal2-popup {
-  border-radius: 24px !important; /* Membuat sudut SweetAlert menjadi rounded/membulat */
+  border-radius: 20px !important;
   font-family: var(--font-jakarta), system-ui, -apple-system, sans-serif !important;
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
-  border: 1px solid rgba(241, 245, 249, 0.95) !important;
-  padding: 2.25rem 1.5rem !important;
+  box-shadow: 0 16px 32px -8px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04) !important;
+  border: 1px solid #e2e8f0 !important;
+  padding: 1.75rem 1.25rem !important;
+  background-color: #ffffff !important;
 }
 
 .swal2-title {
-  font-size: 1.15rem !important;
-  font-weight: 700 !important;
-  color: #1e293b !important;
-  letter-spacing: 0.02em !important;
-  margin-bottom: 0.75rem !important;
+  font-size: 1.05rem !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  margin-bottom: 0.5rem !important;
 }
 
 .swal2-html-container {
-  font-size: 0.85rem !important;
+  font-size: 0.8125rem !important;
   color: #64748b !important;
-  line-height: 1.65 !important;
-  letter-spacing: 0.025em !important;
+  line-height: 1.6 !important;
 }
 
 .swal2-styled.swal2-confirm {
-  background-color: #2563eb !important; /* Warna biru tombol confirm */
-  border-radius: 14px !important; /* Membuat tombol membulat modern */
-  padding: 0.65rem 1.75rem !important;
+  background-color: #059669 !important; /* Emerald 600 */
+  border-radius: 12px !important;
+  padding: 0.55rem 1.4rem !important;
   font-size: 0.75rem !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.04em !important;
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.18) !important;
+  font-weight: 500 !important;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2) !important;
   transition: all 0.2s ease !important;
 }
 
 .swal2-styled.swal2-confirm:hover {
-  background-color: #1d4ed8 !important;
+  background-color: #047857 !important;
   transform: translateY(-1px);
 }
 
-.swal2-styled.swal2-confirm:active {
-  transform: translateY(0);
-}
-
 .swal2-styled.swal2-cancel {
-  background-color: #64748b !important;
-  border-radius: 14px !important;
-  padding: 0.65rem 1.75rem !important;
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border-radius: 12px !important;
+  padding: 0.55rem 1.4rem !important;
   font-size: 0.75rem !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.04em !important;
+  font-weight: 500 !important;
   transition: all 0.2s ease !important;
 }
 
 .swal2-styled.swal2-cancel:hover {
-  background-color: #475569 !important;
-  transform: translateY(-1px);
-}
-
-.swal2-styled.swal2-cancel:active {
-  transform: translateY(0);
+  background-color: #e2e8f0 !important;
+  color: #1e293b !important;
 }
 
 .swal2-icon {
-  border-width: 3px !important;
-  margin: 1.5rem auto 1rem !important;
+  transform: scale(0.85);
+  margin: 1rem auto 0.75rem !important;
 }
-
-/* ==========================================
-// SWEETALERT2 DARK MODE OVERRIDES
-// ========================================== */
-.dark .swal2-popup {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5) !important;
-}
-
-.dark .swal2-title {
-  color: #f1f5f9 !important;
-}
-
-.dark .swal2-html-container {
-  color: #94a3b8 !important;
-}
-
-/* ==========================================
-// GLOBAL DARK MODE STYLING OVERRIDES
-// ========================================== */
-.dark {
-  /* Background overrides */
-  body, .bg-slate-50 {
-    background-color: #090d16 !important;
-  }
-  
-  .bg-white {
-    background-color: #111827 !important; /* slate-900 / gray-900 */
-  }
-  
-  .bg-slate-100 {
-    background-color: #1f2937 !important; /* slate-800 / gray-800 */
-  }
-  
-  .bg-slate-50:not(body) {
-    background-color: #1f2937 !important; /* inputs/cards */
-  }
-  
-  /* Sidebar submenus and tags background overrides */
-  .bg-slate-200\/60 {
-    background-color: rgba(55, 65, 81, 0.6) !important;
-  }
-  
-  .bg-slate-200 {
-    background-color: #374151 !important;
-  }
-
-  /* Borders */
-  .border-slate-100 {
-    border-color: #1f2937 !important;
-  }
-  
-  .border-slate-150 {
-    border-color: #374151 !important;
-  }
-  
-  .border-slate-200 {
-    border-color: #374151 !important;
-  }
-  
-  .border-slate-100\/50 {
-    border-color: rgba(31, 41, 55, 0.5) !important;
-  }
-
-  /* Text Colors */
-  .text-slate-900 {
-    color: #ffffff !important;
-  }
-  
-  .text-slate-800 {
-    color: #f3f4f6 !important;
-  }
-  
-  .text-slate-700 {
-    color: #e5e7eb !important;
-  }
-  
-  .text-slate-600 {
-    color: #d1d5db !important;
-  }
-  
-  .text-slate-500 {
-    color: #9ca3af !important;
-  }
-  
-  .text-slate-400 {
-    color: #9ca3af !important;
-  }
-  
-  /* Text values inside charts & summaries */
-  .text-slate-750 {
-    color: #f3f4f6 !important;
-  }
-  
-  /* Buttons and controls */
-  .bg-slate-50.hover\:bg-blue-600:hover {
-    background-color: #2563eb !important;
-    color: #ffffff !important;
-  }
-  
-  /* Donut chart background ring */
-  circle[stroke="#f1f5f9"] {
-    stroke: #1f2937 !important;
-  }
-  
-  /* Chart tooltip */
-  .bg-slate-900 {
-    background-color: #1e293b !important;
-    border: 1px solid #334155 !important;
-  }
-  
-  /* Inputs */
-  input, select, textarea {
-    background-color: #1f2937 !important;
-    border-color: #374151 !important;
-    color: #ffffff !important;
-  }
-  
-  input:focus, select:focus, textarea:focus {
-    background-color: #111827 !important;
-    border-color: #2563eb !important;
-  }
-
-  /* Table and list item hover states */
-  .hover\:bg-slate-50:hover {
-    background-color: #1f2937 !important;
-  }
-  
-  /* Target Tabungan & Alokasi progress bar container */
-  .bg-slate-200\/60 {
-    background-color: #1f2937 !important;
-  }
-}
-
