@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatRupiah, getPaymentMethodInfo } from "./utils";
 import { Icons } from "./Icons";
@@ -14,6 +14,16 @@ export default function CalendarDayModal({
   onDeleteTransaction,
   onAddTransactionAtDate,
 }) {
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen || !selectedDay) return null;
 
   const dateObj = new Date(selectedDay.dateStr);
@@ -30,18 +40,22 @@ export default function CalendarDayModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+      <div 
+        onClick={onClose}
+        className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-slate-900/60 backdrop-blur-sm overscroll-contain touch-none"
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="bg-white rounded-3xl border border-slate-200/90 shadow-xl w-full max-w-lg max-h-[88vh] flex flex-col overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl w-full max-w-lg max-h-[85dvh] flex flex-col overflow-hidden isolate overscroll-contain"
         >
           {/* Header */}
-          <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <Icons.Calendar className="w-4 h-4" />
               </div>
               <div>
@@ -54,10 +68,11 @@ export default function CalendarDayModal({
               </div>
             </div>
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+              className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition cursor-pointer"
             >
-              ✕
+              <Icons.X className="w-4 h-4" />
             </button>
           </div>
 

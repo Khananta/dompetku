@@ -8,6 +8,15 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#ffffff",
+};
+
 export const metadata = {
   title: "DompetKu - Catat & Kelola Keuangan Pribadi",
   description: "Aplikasi modern pencatat dan pengelola keuangan harian pribadi yang rapi, minimalis, dan akurat.",

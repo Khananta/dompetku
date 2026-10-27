@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Icons } from "./Icons";
 
 export default function Sidebar({
@@ -11,6 +11,15 @@ export default function Sidebar({
   user,
   onLogout,
 }) {
+  useEffect(() => {
+    if (isSidebarOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isSidebarOpen]);
   const menuGroups = [
     {
       label: "MENU UTAMA",
@@ -89,17 +98,17 @@ export default function Sidebar({
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs z-40 lg:hidden"
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden overscroll-contain touch-none"
         />
       )}
 
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-white border-r border-slate-200/80 flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-64 h-[100dvh] max-h-[100dvh] bg-white border-r border-slate-200/80 flex flex-col transition-transform duration-200 ease-in-out isolate overscroll-contain lg:translate-x-0 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Brand Header */}
-        <div className="h-16 px-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="h-16 px-6 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shadow-xs overflow-hidden p-0.5">
               <Icons.Logo className="w-full h-full object-contain" />
@@ -115,10 +124,11 @@ export default function Sidebar({
           </div>
 
           <button
+            type="button"
             onClick={() => setIsSidebarOpen(false)}
-            className="lg:hidden p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
+            className="lg:hidden w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition cursor-pointer"
           >
-            ✕
+            <Icons.X className="w-4 h-4" />
           </button>
         </div>
 

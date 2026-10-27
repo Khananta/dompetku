@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { formatRupiah, exportToCSV, getPaymentMethodInfo, PAYMENT_METHODS } from "./utils";
 import { Icons } from "./Icons";
@@ -38,6 +38,7 @@ export default function TransactionsView({
 
   // Cetak Laporan Modal States
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [reportFormat, setReportFormat] = useState("pdf"); // "pdf" | "csv"
   const [reportType, setReportType] = useState("semua"); // "semua" | "pengeluaran" | "pemasukan"
   const [reportPeriod, setReportPeriod] = useState("bulan-ini"); // "bulan-ini" | "semua" | "kustom"
@@ -46,6 +47,29 @@ export default function TransactionsView({
   const [reportEndDate, setReportEndDate] = useState("");
   const [reportCategory, setReportCategory] = useState("semua");
   const [reportPaymentMethod, setReportPaymentMethod] = useState("semua");
+
+  // Cegah scroll tembus pada background ketika modal aktif (terutama di iOS Safari)
+  useEffect(() => {
+    if (isMobileFilterOpen || isReportModalOpen) {
+      const prevOverflow = document.body.style.overflow;
+      const prevTouchAction = document.body.style.touchAction;
+      document.body.style.overflow = "hidden";
+      document.body.style.touchAction = "none";
+      return () => {
+        document.body.style.overflow = prevOverflow;
+        document.body.style.touchAction = prevTouchAction;
+      };
+    }
+  }, [isMobileFilterOpen, isReportModalOpen]);
+
+  // Jumlah filter aktif untuk badge mobile
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (dateFilterType !== "bulanan") count++;
+    if (paymentMethodFilter !== "semua") count++;
+    if (categoryFilter !== "semua") count++;
+    return count;
+  }, [dateFilterType, paymentMethodFilter, categoryFilter]);
 
   // Filter Logic
   const filteredData = useMemo(() => {
@@ -159,6 +183,21 @@ export default function TransactionsView({
       d.getFullYear() === today.getFullYear()
     );
   };
+
+  // Transaksi hari ini & pengeluaran hari ini
+  const todayTransactions = useMemo(() => {
+    return transactions.filter((t) => isTodayDate(t.created_at || t.date));
+  }, [transactions]);
+
+  const todayExpense = useMemo(() => {
+    return todayTransactions
+      .filter((t) => t.type === "pengeluaran")
+      .reduce((sum, t) => sum + Math.round(Number(t.amount)), 0);
+  }, [todayTransactions]);
+
+  const todayExpenseCount = useMemo(() => {
+    return todayTransactions.filter((t) => t.type === "pengeluaran").length;
+  }, [todayTransactions]);
 
   const isYesterdayDate = (dateStr) => {
     if (!dateStr) return false;
@@ -475,7 +514,34 @@ export default function TransactionsView({
       // 1. TOP SUMMARY CARDS (STATISTIK CEPAT PENGELUARAN)
       // ======================================================== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Pengeluaran */}
+        {/* Card 1: Pengeluaran Hari Ini (Paling Kiri di Desktop, Paling Atas di Mobile) */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Pengeluaran Hari Ini</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Icons.Calendar className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+              {formatRupiah(todayExpense, isPrivateMode)}
+            </h2>
+            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-500">
+              {todayExpenseCount > 0 ? (
+                <>
+                  <span className="text-amber-600 font-semibold">
+                    {todayExpenseCount} Transaksi
+                  </span>
+                  <span>keluar hari ini</span>
+                </>
+              ) : (
+                <span className="text-slate-400">Belum ada pengeluaran hari ini</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: Total Pengeluaran Periode Ini */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">Total Pengeluaran</span>
@@ -496,7 +562,7 @@ export default function TransactionsView({
           </div>
         </div>
 
-        {/* Rata-rata Harian */}
+        {/* Card 3: Rata-rata Harian */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">Rata-rata Harian</span>
@@ -514,39 +580,7 @@ export default function TransactionsView({
           </div>
         </div>
 
-        {/* Kategori Pengeluaran Terbesar */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Kategori Terbesar</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Icons.Tag className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            {topCategory ? (
-              <>
-                <div className="flex items-baseline justify-between">
-                  <h2 className="text-base font-bold text-slate-800 truncate" title={topCategory.category}>
-                    {topCategory.category}
-                  </h2>
-                  <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
-                    {topCategory.percentage}%
-                  </span>
-                </div>
-                <div className="mt-2 text-[11px] text-slate-500">
-                  {formatRupiah(topCategory.amount, isPrivateMode)} • {topCategory.count} tx
-                </div>
-              </>
-            ) : (
-              <>
-                <h2 className="text-sm font-semibold text-slate-400">Belum ada data</h2>
-                <div className="mt-2 text-[11px] text-slate-400">Tidak ada pengeluaran</div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Info Pemasukan / Arus Kas Bersih */}
+        {/* Card 4: Info Pemasukan / Arus Kas Bersih */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">Pemasukan & Selisih</span>
@@ -649,23 +683,24 @@ export default function TransactionsView({
       {/* ========================================================
       // 3. TOOLBAR FILTER, PENCARIAN & EKSPOR
       // ======================================================== */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3.5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           {/* Tipe Tabs: Semua Transaksi (Paling Kiri & Default), Pengeluaran, Pemasukan */}
-          <div className="flex items-center p-1 bg-slate-100 rounded-full text-xs font-medium">
+          <div className="grid grid-cols-3 sm:inline-flex p-1 bg-slate-100 rounded-full text-xs font-medium w-full sm:w-auto text-center">
             <button
               onClick={() => setTypeFilter("semua")}
-              className={`px-3.5 py-1.5 rounded-full active:scale-95 transition cursor-pointer ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-full active:scale-95 transition cursor-pointer text-center truncate ${
                 typeFilter === "semua"
                   ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Semua Transaksi
+              <span className="sm:hidden">Semua</span>
+              <span className="hidden sm:inline">Semua Transaksi</span>
             </button>
             <button
               onClick={() => setTypeFilter("pengeluaran")}
-              className={`px-3.5 py-1.5 rounded-full active:scale-95 transition cursor-pointer ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-full active:scale-95 transition cursor-pointer text-center truncate ${
                 typeFilter === "pengeluaran"
                   ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
@@ -675,7 +710,7 @@ export default function TransactionsView({
             </button>
             <button
               onClick={() => setTypeFilter("pemasukan")}
-              className={`px-3.5 py-1.5 rounded-full active:scale-95 transition cursor-pointer ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-full active:scale-95 transition cursor-pointer text-center truncate ${
                 typeFilter === "pemasukan"
                   ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
@@ -685,18 +720,33 @@ export default function TransactionsView({
             </button>
           </div>
 
-          {/* Export Button "Cetak Laporan" & Mode Tampilan */}
-          <div className="flex items-center gap-2">
+          {/* Export Button "Cetak Laporan", Mobile Filter Button, & Mode Tampilan */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setIsReportModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white text-xs font-semibold rounded-full shadow-xs hover:shadow transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white text-xs font-semibold rounded-full shadow-xs hover:shadow transition cursor-pointer shrink-0"
               title="Buka menu cetak dan ekspor laporan"
             >
-              <Icons.Download className="w-3.5 h-3.5" />
+              <Icons.Download className="w-3.5 h-3.5 shrink-0" />
               <span>Cetak Laporan</span>
             </button>
 
-            <div className="flex items-center p-1 bg-slate-100 rounded-full relative">
+            {/* Mobile Filter Button: penempatannya di tengah-tengah antara cetak laporan dan pengubah grid, mengisi sisa panjang */}
+            <button
+              type="button"
+              onClick={() => setIsMobileFilterOpen(true)}
+              className="sm:hidden flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-semibold rounded-full transition cursor-pointer"
+            >
+              <Icons.SlidersHorizontal className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+              <span>Filter</span>
+              {activeFiltersCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-emerald-600 text-white text-[10px] flex items-center justify-center font-bold">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
+
+            <div className="flex items-center p-1 bg-slate-100 rounded-full relative shrink-0">
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
@@ -736,11 +786,11 @@ export default function TransactionsView({
           </div>
         </div>
 
-        {/* Date Filter, Category Selection & Payment Method - All Rounded Full */}
-        <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-slate-100 text-xs">
-          {/* Periode */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">Periode:</span>
+        {/* Date Filter, Category Selection & Payment Method (Desktop Only) */}
+        <div className="hidden sm:flex pt-2.5 border-t border-slate-100 items-center flex-wrap gap-2.5 text-xs">
+          {/* Periode & Tanggal */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <span className="text-slate-400 font-medium shrink-0">Periode:</span>
             <select
               value={dateFilterType}
               onChange={(e) => setDateFilterType(e.target.value)}
@@ -751,67 +801,68 @@ export default function TransactionsView({
               <option value="kustom">Rentang Tanggal</option>
               <option value="semua">Semua Waktu</option>
             </select>
+
+            {dateFilterType === "bulanan" && (
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="py-1 px-3 bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-emerald-500 text-xs cursor-pointer"
+              />
+            )}
+
+            {dateFilterType === "kustom" && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="py-1 px-2.5 bg-slate-50 border border-slate-200 rounded-full text-slate-700 text-xs cursor-pointer"
+                />
+                <span className="text-slate-400">s/d</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="py-1 px-2.5 bg-slate-50 border border-slate-200 rounded-full text-slate-700 text-xs cursor-pointer"
+                />
+              </div>
+            )}
           </div>
 
-          {dateFilterType === "bulanan" && (
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="py-1 px-3 bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-emerald-500 text-xs cursor-pointer"
-            />
-          )}
-
-          {dateFilterType === "kustom" && (
-            <div className="flex items-center gap-1.5">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="py-1 px-3 bg-slate-50 border border-slate-200 rounded-full text-slate-700 text-xs cursor-pointer"
-              />
-              <span className="text-slate-400">s/d</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="py-1 px-3 bg-slate-50 border border-slate-200 rounded-full text-slate-700 text-xs cursor-pointer"
-              />
+          {/* Filter Metode Pembayaran & Kategori */}
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:ml-auto w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-slate-400 font-medium shrink-0 hidden sm:inline">Metode:</span>
+              <select
+                value={paymentMethodFilter}
+                onChange={(e) => setPaymentMethodFilter(e.target.value)}
+                className="w-full sm:w-auto py-1 px-3 bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-emerald-500 text-xs cursor-pointer truncate"
+              >
+                <option value="semua">Semua Metode</option>
+                {PAYMENT_METHODS.map((pm) => (
+                  <option key={pm.id} value={pm.id}>
+                    {pm.label}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
 
-          {/* Filter Metode Pembayaran */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">Metode:</span>
-            <select
-              value={paymentMethodFilter}
-              onChange={(e) => setPaymentMethodFilter(e.target.value)}
-              className="py-1 px-3 bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-emerald-500 text-xs cursor-pointer"
-            >
-              <option value="semua">Semua Metode</option>
-              {PAYMENT_METHODS.map((pm) => (
-                <option key={pm.id} value={pm.id}>
-                  {pm.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filter Kategori */}
-          <div className="flex items-center gap-1.5 ml-auto">
-            <span className="text-slate-400">Kategori:</span>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="py-1 px-3 bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-emerald-500 text-xs cursor-pointer"
-            >
-              <option value="semua">Semua Kategori</option>
-              {allCategories.map((c, i) => (
-                <option key={i} value={c.name}>
-                  {c.name} ({c.type})
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-slate-400 font-medium shrink-0 hidden sm:inline">Kategori:</span>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full sm:w-auto py-1 px-3 bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-emerald-500 text-xs cursor-pointer truncate"
+              >
+                <option value="semua">Semua Kategori</option>
+                {allCategories.map((c, i) => (
+                  <option key={i} value={c.name}>
+                    {c.name} ({c.type})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -824,21 +875,21 @@ export default function TransactionsView({
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
             <div>
               {/* Header Card & Selection Controls */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-100 mb-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Rekapitulasi Pengeluaran</h3>
-                  <p className="text-xs text-slate-400">Mutasi keuangan terkelompok berdasarkan tanggal</p>
+              <div className="flex items-center justify-between gap-2.5 pb-3.5 border-b border-slate-100 mb-2">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-slate-900 truncate">Rekapitulasi Pengeluaran</h3>
+                  <p className="text-xs text-slate-400 hidden sm:block">Mutasi keuangan terkelompok berdasarkan tanggal</p>
                 </div>
 
-                <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="flex items-center gap-2 shrink-0">
                   {/* Select All Radio/Checkbox Button */}
                   <button
                     type="button"
                     onClick={handleSelectAll}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs font-medium text-slate-700 transition cursor-pointer select-none"
+                    className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs font-medium text-slate-700 transition cursor-pointer select-none active:scale-95"
                   >
                     <span
-                      className={`w-4 h-4 rounded-full flex items-center justify-center transition border ${
+                      className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition border ${
                         filteredData.length > 0 && selectedIds.length === filteredData.length
                           ? "bg-emerald-600 border-emerald-600 text-white"
                           : "border-slate-300 bg-white"
@@ -848,27 +899,27 @@ export default function TransactionsView({
                         <span className="w-1.5 h-1.5 bg-white rounded-full" />
                       )}
                     </span>
-                    <span>
+                    <span className="text-[11px] sm:text-xs">
                       {filteredData.length > 0 && selectedIds.length === filteredData.length
-                        ? "Batalkan Pilih Semua"
+                        ? "Batal Semua"
                         : "Pilih Semua"}
                     </span>
                   </button>
 
                   {/* Bulk Delete Button when items selected */}
                   {selectedIds.length > 0 && (
-                    <div className="flex items-center gap-2 animate-in fade-in duration-200">
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-                        {selectedIds.length} dipilih
+                    <div className="flex items-center gap-1.5 animate-in fade-in duration-200">
+                      <span className="text-[11px] sm:text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                        {selectedIds.length}
                       </span>
                       <button
                         type="button"
                         onClick={handleBulkDelete}
                         title="Hapus semua transaksi terpilih"
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-semibold rounded-full shadow-xs hover:shadow transition cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-semibold rounded-full shadow-xs hover:shadow transition cursor-pointer"
                       >
                         <Icons.Trash className="w-3.5 h-3.5" />
-                        <span>Hapus ({selectedIds.length})</span>
+                        <span className="hidden sm:inline">Hapus</span>
                       </button>
                     </div>
                   )}
@@ -958,9 +1009,9 @@ export default function TransactionsView({
                                     <Icons.TrendingUp className="w-4 h-4" />
                                   )}
                                 </div>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <p className="text-xs font-semibold text-slate-800 truncate">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-x-1.5 gap-y-1 flex-wrap">
+                                    <p className="text-xs font-semibold text-slate-800 truncate max-w-[140px] sm:max-w-none">
                                       {tx.note || tx.category}
                                     </p>
                                     <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 shrink-0">
@@ -970,7 +1021,7 @@ export default function TransactionsView({
                                       {methodInfo.short}
                                     </span>
                                   </div>
-                                  <p className="text-[11px] text-slate-400">
+                                  <p className="text-[11px] text-slate-400 mt-1.5 sm:mt-1">
                                     Pukul {formattedTime}
                                   </p>
                                 </div>
@@ -1013,16 +1064,10 @@ export default function TransactionsView({
             </div>
 
             {/* Bottom info bar */}
-            <div className="mt-4 pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 px-1 gap-2">
+            <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 px-1">
               <span>
                 Menampilkan <strong className="text-slate-700 font-semibold">{filteredData.length}</strong> transaksi terkelompok
               </span>
-              <button
-                onClick={onOpenAddModal}
-                className="px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white text-xs font-semibold rounded-full shadow-xs hover:shadow transition cursor-pointer"
-              >
-                + Catat Pengeluaran
-              </button>
             </div>
           </div>
         ) : (
@@ -1180,8 +1225,14 @@ export default function TransactionsView({
       // 5. MODAL POPUP CETAK LAPORAN (INTERAKTIF & FLEKSIBEL)
       // ======================================================== */}
       {isReportModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div
+          onClick={() => setIsReportModalOpen(false)}
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3.5 sm:p-4 overscroll-contain touch-none animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl shadow-2xl border border-slate-200/90 max-w-md w-full p-5 sm:p-6 space-y-4 max-h-[85dvh] flex flex-col overflow-hidden isolate overscroll-contain animate-in zoom-in-95 duration-200"
+          >
             {/* Header Modal */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
@@ -1403,6 +1454,178 @@ export default function TransactionsView({
               >
                 <Icons.Download className="w-3.5 h-3.5" />
                 <span>Unduh {reportFormat.toUpperCase()}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+      // 6. MODAL POPUP FILTER MOBILE
+      // ======================================================== */}
+      {isMobileFilterOpen && (
+        <div
+          onClick={() => setIsMobileFilterOpen(false)}
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3.5 sm:p-4 overscroll-contain touch-none animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl shadow-2xl border border-slate-200/90 max-w-md w-full p-4 sm:p-5 space-y-4 max-h-[85dvh] flex flex-col overflow-hidden isolate overscroll-contain animate-in zoom-in-95 duration-200"
+          >
+            {/* Header Modal */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <Icons.SlidersHorizontal className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Filter Transaksi</h3>
+                  <p className="text-[11px] text-slate-400">Sesuaikan periode, kategori, & metode</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition cursor-pointer shrink-0"
+              >
+                <Icons.X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Content Filters (Scrollable) */}
+            <div className="overflow-y-auto flex-1 space-y-3.5 text-xs pr-1 overscroll-contain">
+              {/* Periode */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1.5">
+                  Periode Transaksi
+                </label>
+                <div className="relative">
+                  <select
+                    value={dateFilterType}
+                    onChange={(e) => setDateFilterType(e.target.value)}
+                    className="w-full py-2.5 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-emerald-500 text-xs cursor-pointer appearance-none"
+                  >
+                    <option value="bulanan">Per Bulan</option>
+                    <option value="hari-ini">Hari Ini</option>
+                    <option value="kustom">Rentang Tanggal</option>
+                    <option value="semua">Semua Waktu</option>
+                  </select>
+                  <Icons.ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                </div>
+              </div>
+
+              {/* Tanggal Bulanan */}
+              {dateFilterType === "bulanan" && (
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5">
+                    Pilih Bulan
+                  </label>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="w-full py-2.5 px-3.5 bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-emerald-500 text-xs cursor-pointer min-h-[40px]"
+                  />
+                </div>
+              )}
+
+              {/* Tanggal Kustom */}
+              {dateFilterType === "kustom" && (
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-semibold text-slate-700">
+                    Rentang Tanggal
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block mb-1">Mulai:</span>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-full text-slate-700 text-xs cursor-pointer min-h-[38px]"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block mb-1">Sampai:</span>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-full text-slate-700 text-xs cursor-pointer min-h-[38px]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Metode Pembayaran */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1.5">
+                  Metode Pembayaran
+                </label>
+                <div className="relative">
+                  <select
+                    value={paymentMethodFilter}
+                    onChange={(e) => setPaymentMethodFilter(e.target.value)}
+                    className="w-full py-2.5 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-emerald-500 text-xs cursor-pointer appearance-none"
+                  >
+                    <option value="semua">Semua Metode Pembayaran</option>
+                    {PAYMENT_METHODS.map((pm) => (
+                      <option key={pm.id} value={pm.id}>
+                        {pm.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Icons.ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                </div>
+              </div>
+
+              {/* Kategori */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1.5">
+                  Kategori
+                </label>
+                <div className="relative">
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="w-full py-2.5 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-emerald-500 text-xs cursor-pointer appearance-none"
+                  >
+                    <option value="semua">Semua Kategori</option>
+                    {allCategories.map((c, i) => (
+                      <option key={i} value={c.name}>
+                        {c.name} ({c.type})
+                      </option>
+                    ))}
+                  </select>
+                  <Icons.ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Modal */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setDateFilterType("bulanan");
+                  setSelectedMonth(`${yyyy}-${mm}`);
+                  setStartDate("");
+                  setEndDate("");
+                  setPaymentMethodFilter("semua");
+                  setCategoryFilter("semua");
+                }}
+                className="px-4 py-2.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-full font-semibold text-xs transition cursor-pointer"
+              >
+                Reset Filter
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="flex-1 py-2.5 px-5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white text-xs font-semibold rounded-full shadow-xs hover:shadow transition cursor-pointer text-center"
+              >
+                Terapkan Filter
               </button>
             </div>
           </div>

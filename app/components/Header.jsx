@@ -67,12 +67,12 @@ export default function Header({
   const { title, subtitle } = getTabTitle(activeTab);
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <header className="fixed top-0 left-0 right-0 lg:left-64 z-30 h-16 bg-white border-b border-slate-200/80 shadow-xs px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2">
       {/* Title & Mobile Toggle */}
-      <div className="flex items-center gap-2.5 sm:gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           onClick={() => setIsSidebarOpen(true)}
-          className="lg:hidden p-2 -ml-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 active:scale-95 rounded-xl transition cursor-pointer"
+          className="lg:hidden p-1.5 sm:p-2 -ml-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 active:scale-95 rounded-xl transition cursor-pointer shrink-0"
           aria-label="Buka menu"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -80,12 +80,12 @@ export default function Header({
           </svg>
         </button>
 
-        <div className="lg:hidden w-7 h-7 flex items-center justify-center shrink-0">
+        <div className="lg:hidden w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shrink-0">
           <Icons.Logo className="w-full h-full" />
         </div>
 
-        <div>
-          <h1 className="text-base sm:text-lg font-semibold text-slate-900 tracking-tight leading-tight">
+        <div className="min-w-0">
+          <h1 className="text-sm sm:text-lg font-semibold text-slate-900 tracking-tight leading-tight truncate">
             {title}
           </h1>
           <p className="text-xs text-slate-400 font-normal hidden sm:block">
@@ -95,7 +95,7 @@ export default function Header({
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-2 sm:gap-2.5 ml-auto md:ml-0 w-full md:w-auto justify-end">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 justify-end">
         {/* Privacy Mode Toggle */}
         <button
           onClick={togglePrivacyMode}
@@ -117,7 +117,7 @@ export default function Header({
         <button
           onClick={onOpenBulkModal}
           title="Catat Massal Beberapa Transaksi Sekaligus"
-          className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-medium rounded-full transition cursor-pointer"
+          className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-medium rounded-full transition cursor-pointer shrink-0"
         >
           <Icons.Receipt className="w-3.5 h-3.5 text-slate-500" />
           <span>Catat Massal</span>
@@ -126,9 +126,9 @@ export default function Header({
         {/* Primary CTA: Catat Transaksi (Gradien Hijau & Rounded Full) */}
         <button
           onClick={onOpenAddModal}
-          className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white text-xs font-medium rounded-full shadow-xs hover:shadow transition cursor-pointer"
+          className="inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white text-xs font-medium rounded-full shadow-xs hover:shadow transition cursor-pointer whitespace-nowrap shrink-0"
         >
-          <Icons.Plus className="w-3.5 h-3.5" />
+          <Icons.Plus className="w-3.5 h-3.5 shrink-0" />
           <span>Catat Transaksi</span>
         </button>
       </div>

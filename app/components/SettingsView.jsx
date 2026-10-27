@@ -508,11 +508,11 @@ export default function SettingsView({
               </div>
 
               {/* Filter Tabs (Full Rounded & Gradient Hijau Saat Aktif) */}
-              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-full shrink-0">
+              <div className="grid grid-cols-3 w-full sm:w-auto p-1 bg-slate-100 rounded-full text-center gap-1 shrink-0">
                 <button
                   type="button"
                   onClick={() => setCatFilter("semua")}
-                  className={`px-3.5 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                  className={`py-1.5 px-3 sm:px-4 rounded-full text-xs font-semibold transition cursor-pointer text-center flex items-center justify-center whitespace-nowrap ${
                     catFilter === "semua"
                       ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
@@ -523,7 +523,7 @@ export default function SettingsView({
                 <button
                   type="button"
                   onClick={() => setCatFilter("pengeluaran")}
-                  className={`px-3.5 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                  className={`py-1.5 px-3 sm:px-4 rounded-full text-xs font-semibold transition cursor-pointer text-center flex items-center justify-center whitespace-nowrap ${
                     catFilter === "pengeluaran"
                       ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
@@ -534,7 +534,7 @@ export default function SettingsView({
                 <button
                   type="button"
                   onClick={() => setCatFilter("pemasukan")}
-                  className={`px-3.5 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                  className={`py-1.5 px-3 sm:px-4 rounded-full text-xs font-semibold transition cursor-pointer text-center flex items-center justify-center whitespace-nowrap ${
                     catFilter === "pemasukan"
                       ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-xs"
                       : "text-slate-600 hover:text-slate-900"

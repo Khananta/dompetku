@@ -190,27 +190,27 @@ export default function SavingGoalsView({
     return (
       <div className="space-y-6">
         {/* Navigation & Action Bar Atas */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center justify-between gap-2 bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-xs">
           <button
             type="button"
             onClick={() => setSelectedGoalDetailId(null)}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 flex items-center justify-center transition cursor-pointer self-start sm:self-auto"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 flex items-center justify-center transition cursor-pointer shrink-0"
             title="Kembali ke Daftar Target"
           >
             <Icons.ChevronLeft className="w-4 h-4" />
           </button>
 
-          <div className="flex items-center gap-2 self-end sm:self-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={() => onEditGoal(selectedGoalDetail)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-full text-xs font-semibold transition cursor-pointer"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-full text-xs font-semibold transition cursor-pointer"
             >
               <Icons.Edit className="w-3.5 h-3.5" />
               <span>Edit Target</span>
             </button>
             <button
               onClick={() => onOpenDepositModal(selectedGoalDetail)}
-              className="inline-flex items-center px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white rounded-full text-xs font-semibold transition shadow-xs hover:shadow cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 sm:px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white rounded-full text-xs font-semibold transition shadow-xs hover:shadow cursor-pointer whitespace-nowrap"
             >
               <span>+ Setor Dana</span>
             </button>
@@ -383,7 +383,7 @@ export default function SavingGoalsView({
                                       Setoran
                                     </span>
                                   </div>
-                                  <p className="text-[11px] text-slate-400">
+                                  <p className="text-[11px] text-slate-400 mt-1 sm:mt-0.5">
                                     Pukul {formattedTime}
                                   </p>
                                 </div>
@@ -504,13 +504,13 @@ export default function SavingGoalsView({
       {/* ========================================================
       // 2. TOOLBAR FILTER (HANYA SEDANG BERJALAN & TERCAPAI)
       // ======================================================== */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-        {/* Status Filter Tabs (Sedang Berjalan & Tercapai) - Full Rounded & Gradient Hijau */}
-        <div className="flex items-center p-1 bg-slate-100 rounded-full text-xs font-medium">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+        {/* Status Filter Tabs (Sedang Berjalan & Tercapai) - Full Width Mengikuti Container di Mobile */}
+        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-full text-xs font-medium w-full sm:w-auto text-center">
           <button
             type="button"
             onClick={() => setFilter("progress")}
-            className={`px-4 py-1.5 rounded-full transition-all active:scale-95 cursor-pointer ${
+            className={`py-2 px-4 rounded-full transition-all active:scale-95 cursor-pointer text-center ${
               filter === "progress"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
                 : "text-slate-500 hover:text-slate-800"
@@ -521,7 +521,7 @@ export default function SavingGoalsView({
           <button
             type="button"
             onClick={() => setFilter("selesai")}
-            className={`px-4 py-1.5 rounded-full transition-all active:scale-95 cursor-pointer ${
+            className={`py-2 px-4 rounded-full transition-all active:scale-95 cursor-pointer text-center ${
               filter === "selesai"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
                 : "text-slate-500 hover:text-slate-800"
@@ -531,12 +531,12 @@ export default function SavingGoalsView({
           </button>
         </div>
 
-        {/* Tombol + Target Baru (Hanya 1 Tanda Plus, Full Rounded & Gradient Hijau) */}
-        <div className="flex items-center gap-2.5">
+        {/* Tombol + Target Baru - Full Width Mengikuti Container di Mobile */}
+        <div className="w-full sm:w-auto">
           <button
             type="button"
             onClick={onOpenNewGoalModal}
-            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white rounded-full text-xs font-semibold transition shadow-xs hover:shadow cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white rounded-full text-xs font-semibold transition shadow-xs hover:shadow cursor-pointer text-center"
           >
             <span>+ Target Baru</span>
           </button>

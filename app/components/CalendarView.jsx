@@ -4,6 +4,20 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { formatRupiah } from "./utils";
 import { Icons } from "./Icons";
 
+// Helper ringkas nominal untuk tampilan mobile kalender agar tidak terpotong (... )
+function formatCompactNominal(amount) {
+  if (!amount) return "0";
+  if (amount >= 1000000) {
+    const jt = (amount / 1000000).toFixed(1).replace(".0", "");
+    return `${jt}jt`;
+  }
+  if (amount >= 1000) {
+    const rb = Math.round(amount / 1000);
+    return `${rb}rb`;
+  }
+  return String(amount);
+}
+
 export default function CalendarView({
   transactions,
   isPrivateMode,
@@ -260,147 +274,150 @@ export default function CalendarView({
       {/* ========================================================
       // 2. MAIN CALENDAR CARD
       // ======================================================== */}
-      <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-5">
-        {/* Calendar Header with Rounded Green Chevron Buttons */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-          <div>
+      <div className="bg-white p-3.5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4 sm:space-y-5">
+        {/* Calendar Header: Responsif - di desktop filter di kiri kalender, di mobile seperti screenshot */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-y-2.5 gap-x-2 sm:gap-4 pb-3 sm:pb-4 border-b border-slate-100">
+          {/* 1. Title Block (Kiri di Mobile & Desktop) */}
+          <div className="order-1 sm:order-1 min-w-0">
             <h2 className="text-base sm:text-xl font-bold text-slate-900 tracking-tight">
               {monthNames[month]} {year}
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">
               Klik pada tanggal untuk melihat rincian mutasi hari tersebut.
             </p>
           </div>
 
-          {/* Right Header: Filter & Navigation (Hilangkan teks Hari Ini, Chevron Buttons Rounded Full & Light Green) */}
-          <div className="flex items-center gap-3 self-end sm:self-auto">
-            {/* Filter Pill: Semua / Pengeluaran / Pemasukan */}
-            <div className="flex items-center p-1 bg-slate-100 rounded-full text-xs font-medium">
-              <button
-                type="button"
-                onClick={() => setViewFilter("semua")}
-                className={`px-3 py-1.5 rounded-full transition-all active:scale-95 cursor-pointer ${
-                  viewFilter === "semua"
-                    ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Semua
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewFilter("pengeluaran")}
-                className={`px-3 py-1.5 rounded-full transition-all active:scale-95 cursor-pointer ${
-                  viewFilter === "pengeluaran"
-                    ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Pengeluaran
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewFilter("pemasukan")}
-                className={`px-3 py-1.5 rounded-full transition-all active:scale-95 cursor-pointer ${
-                  viewFilter === "pemasukan"
-                    ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Pemasukan
-              </button>
-            </div>
+          {/* 2. Tombol Navigasi Kalender (Kanan atas di Mobile, Kanan di Desktop) */}
+          <div className="relative flex items-center gap-1.5 shrink-0 order-2 sm:order-3" ref={datePickerRef}>
+            <button
+              type="button"
+              onClick={() => setIsDatePickerOpen((prev) => !prev)}
+              className={`w-8 h-8 rounded-full border border-emerald-200/60 shadow-2xs flex items-center justify-center transition cursor-pointer active:scale-95 ${
+                isDatePickerOpen
+                  ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
+                  : "bg-[#f0fdf4] hover:bg-[#dcfce7] text-emerald-700"
+              }`}
+              title="Pilih & Loncat Bulan/Tahun"
+            >
+              <Icons.Calendar className="w-4 h-4" />
+            </button>
 
-            {/* Tombol Navigasi: Tombol Kalender (Pilih & Loncat Bulan) di Sebelah Kiri Chevron Left */}
-            <div className="relative flex items-center gap-1.5" ref={datePickerRef}>
-              <button
-                type="button"
-                onClick={() => setIsDatePickerOpen((prev) => !prev)}
-                className={`w-8 h-8 rounded-full border border-emerald-200/60 shadow-2xs flex items-center justify-center transition cursor-pointer active:scale-95 ${
-                  isDatePickerOpen
-                    ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
-                    : "bg-[#f0fdf4] hover:bg-[#dcfce7] text-emerald-700"
-                }`}
-                title="Pilih & Loncat Bulan/Tahun"
-              >
-                <Icons.Calendar className="w-4 h-4" />
-              </button>
-
-              {/* Popover Loncat Bulan & Tahun */}
-              {isDatePickerOpen && (
-                <div className="absolute right-0 top-10 z-40 bg-white rounded-2xl border border-slate-200/90 shadow-xl p-4 w-72 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <span className="text-xs font-bold text-slate-800">Pilih Periode Bulan</span>
-                    <select
-                      value={year}
-                      onChange={(e) => setCurrentDate(new Date(Number(e.target.value), month, 1))}
-                      className="text-xs font-semibold px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500"
-                    >
-                      {[year - 3, year - 2, year - 1, year, year + 1, year + 2, year + 3].map((y) => (
-                        <option key={y} value={y}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Grid 12 Bulan */}
-                  <div className="grid grid-cols-3 gap-1.5 py-3">
-                    {monthNames.map((mName, mIdx) => {
-                      const isSelected = mIdx === month;
-                      return (
-                        <button
-                          key={mIdx}
-                          type="button"
-                          onClick={() => {
-                            setCurrentDate(new Date(year, mIdx, 1));
-                            setIsDatePickerOpen(false);
-                          }}
-                          className={`py-1.5 text-xs rounded-xl font-medium transition cursor-pointer ${
-                            isSelected
-                              ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
-                              : "hover:bg-slate-100 text-slate-600"
-                          }`}
-                        >
-                          {mName.slice(0, 3)}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Loncat ke Bulan Ini */}
-                  <div className="pt-2 border-t border-slate-100">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCurrentDate(new Date());
-                        setIsDatePickerOpen(false);
-                      }}
-                      className="w-full py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition cursor-pointer text-center"
-                    >
-                      Loncat ke Bulan Sekarang
-                    </button>
-                  </div>
+            {/* Popover Loncat Bulan & Tahun */}
+            {isDatePickerOpen && (
+              <div className="absolute right-0 top-10 z-40 bg-white rounded-2xl border border-slate-200/90 shadow-xl p-4 w-72 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <span className="text-xs font-bold text-slate-800">Pilih Periode Bulan</span>
+                  <select
+                    value={year}
+                    onChange={(e) => setCurrentDate(new Date(Number(e.target.value), month, 1))}
+                    className="text-xs font-semibold px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500"
+                  >
+                    {[year - 3, year - 2, year - 1, year, year + 1, year + 2, year + 3].map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
 
-              <button
-                type="button"
-                onClick={handlePrevMonth}
-                className="w-8 h-8 rounded-full bg-[#f0fdf4] hover:bg-[#dcfce7] active:scale-95 text-emerald-700 border border-emerald-200/60 shadow-2xs flex items-center justify-center transition cursor-pointer"
-                title="Bulan sebelumnya"
-              >
-                <Icons.ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={handleNextMonth}
-                className="w-8 h-8 rounded-full bg-[#f0fdf4] hover:bg-[#dcfce7] active:scale-95 text-emerald-700 border border-emerald-200/60 shadow-2xs flex items-center justify-center transition cursor-pointer"
-                title="Bulan berikutnya"
-              >
-                <Icons.ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+                {/* Grid 12 Bulan */}
+                <div className="grid grid-cols-3 gap-1.5 py-3">
+                  {monthNames.map((mName, mIdx) => {
+                    const isSelected = mIdx === month;
+                    return (
+                      <button
+                        key={mIdx}
+                        type="button"
+                        onClick={() => {
+                          setCurrentDate(new Date(year, mIdx, 1));
+                          setIsDatePickerOpen(false);
+                        }}
+                        className={`py-1.5 text-xs rounded-xl font-medium transition cursor-pointer ${
+                          isSelected
+                            ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
+                            : "hover:bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {mName.slice(0, 3)}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Loncat ke Bulan Ini */}
+                <div className="pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentDate(new Date());
+                      setIsDatePickerOpen(false);
+                    }}
+                    className="w-full py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition cursor-pointer text-center"
+                  >
+                    Loncat ke Bulan Sekarang
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className="w-8 h-8 rounded-full bg-[#f0fdf4] hover:bg-[#dcfce7] active:scale-95 text-emerald-700 border border-emerald-200/60 shadow-2xs flex items-center justify-center transition cursor-pointer"
+              title="Bulan sebelumnya"
+            >
+              <Icons.ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className="w-8 h-8 rounded-full bg-[#f0fdf4] hover:bg-[#dcfce7] active:scale-95 text-emerald-700 border border-emerald-200/60 shadow-2xs flex items-center justify-center transition cursor-pointer"
+              title="Bulan berikutnya"
+            >
+              <Icons.ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* 3. Subtitle di Mobile (Bawah Title) */}
+          <p className="w-full text-xs text-slate-400 -mt-1 sm:hidden order-3">
+            Klik pada tanggal untuk melihat rincian mutasi hari tersebut.
+          </p>
+
+          {/* 4. Filter Tabs: di Mobile baris bawah full width, di Desktop di sebelah kiri tombol navigasi kalender */}
+          <div className="order-4 sm:order-2 sm:ml-auto w-full sm:w-auto grid grid-cols-3 sm:flex sm:items-center p-1 bg-slate-100 rounded-full text-xs font-medium text-center">
+            <button
+              type="button"
+              onClick={() => setViewFilter("semua")}
+              className={`py-1.5 px-3 rounded-full transition-all active:scale-95 cursor-pointer text-center whitespace-nowrap ${
+                viewFilter === "semua"
+                  ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Semua
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewFilter("pengeluaran")}
+              className={`py-1.5 px-3 rounded-full transition-all active:scale-95 cursor-pointer text-center whitespace-nowrap ${
+                viewFilter === "pengeluaran"
+                  ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Pengeluaran
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewFilter("pemasukan")}
+              className={`py-1.5 px-3 rounded-full transition-all active:scale-95 cursor-pointer text-center whitespace-nowrap ${
+                viewFilter === "pemasukan"
+                  ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Pemasukan
+            </button>
           </div>
         </div>
 
@@ -414,15 +431,15 @@ export default function CalendarView({
         </div>
 
         {/* Calendar Days Matrix */}
-        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2">
           {calendarDays.map((item, index) => {
             if (!item.isCurrentMonth) {
               return (
                 <div
                   key={index}
-                  className="min-h-[75px] sm:min-h-[92px] p-1.5 sm:p-2 rounded-xl bg-slate-50/40 text-slate-300 text-xs select-none"
+                  className="min-h-[64px] sm:min-h-[92px] p-1 sm:p-2 rounded-xl sm:rounded-2xl bg-slate-50/40 text-slate-300 text-xs select-none"
                 >
-                  <span className="font-semibold text-slate-300">{item.dayNumber}</span>
+                  <span className="font-semibold text-slate-300 text-[11px] sm:text-xs">{item.dayNumber}</span>
                 </div>
               );
             }
@@ -436,7 +453,7 @@ export default function CalendarView({
               <div
                 key={index}
                 onClick={() => onSelectDay(item)}
-                className={`min-h-[75px] sm:min-h-[92px] p-2 rounded-2xl border transition flex flex-col justify-between ${
+                className={`min-h-[64px] sm:min-h-[92px] p-1 sm:p-2 rounded-xl sm:rounded-2xl border transition flex flex-col justify-between ${
                   isToday
                     ? "border-emerald-500 bg-emerald-50/30 shadow-xs"
                     : "border-slate-100 bg-white hover:border-slate-300 hover:shadow-xs"
@@ -445,7 +462,7 @@ export default function CalendarView({
                 {/* Day Header */}
                 <div className="flex items-center justify-between">
                   <span
-                    className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center ${
+                    className={`text-xs font-bold w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center ${
                       isToday
                         ? "bg-emerald-600 text-white shadow-2xs"
                         : "text-slate-700 group-hover:text-emerald-700"
@@ -462,19 +479,21 @@ export default function CalendarView({
                 </div>
 
                 {/* Day Financial Badges */}
-                <div className="space-y-0.5 mt-1 min-w-0">
+                <div className="space-y-0.5 mt-0.5 sm:mt-1 min-w-0">
                   {showInc && (
-                    <div className="text-[10px] text-emerald-700 bg-emerald-50/80 px-1.5 py-0.5 rounded font-semibold truncate border border-emerald-100/60">
-                      +{formatRupiah(item.income, isPrivateMode)}
+                    <div className="text-[9px] sm:text-[10px] text-emerald-700 bg-emerald-50/90 px-1 sm:px-1.5 py-0.5 rounded font-semibold truncate border border-emerald-100/60">
+                      <span className="sm:hidden">+{isPrivateMode ? "••" : formatCompactNominal(item.income)}</span>
+                      <span className="hidden sm:inline">+{formatRupiah(item.income, isPrivateMode)}</span>
                     </div>
                   )}
                   {showExp && (
-                    <div className="text-[10px] text-rose-700 bg-rose-50/80 px-1.5 py-0.5 rounded font-semibold truncate border border-rose-100/60">
-                      -{formatRupiah(item.expense, isPrivateMode)}
+                    <div className="text-[9px] sm:text-[10px] text-rose-700 bg-rose-50/90 px-1 sm:px-1.5 py-0.5 rounded font-semibold truncate border border-rose-100/60">
+                      <span className="sm:hidden">-{isPrivateMode ? "••" : formatCompactNominal(item.expense)}</span>
+                      <span className="hidden sm:inline">-{formatRupiah(item.expense, isPrivateMode)}</span>
                     </div>
                   )}
                   {!hasTx && (
-                    <span className="text-[10px] text-slate-300 font-normal pl-0.5 select-none">-</span>
+                    <span className="text-[10px] text-slate-300 font-normal pl-0.5 select-none hidden sm:inline">-</span>
                   )}
                 </div>
               </div>

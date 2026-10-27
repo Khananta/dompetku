@@ -89,7 +89,13 @@ export default function BillingsView({
       // ======================================================== */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Card 1: Tagihan Rutin */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div 
+          onClick={() => setTypeFilter((prev) => (prev === "biasa" ? "semua" : "biasa"))}
+          title="Klik untuk filter Tagihan Rutin"
+          className={`bg-white p-5 rounded-2xl border shadow-xs flex flex-col justify-between transition cursor-pointer hover:shadow-md ${
+            typeFilter === "biasa" ? "border-blue-500 ring-2 ring-blue-100" : "border-slate-200/80 hover:border-slate-300"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">Tagihan Rutin Tertunda</span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -110,7 +116,13 @@ export default function BillingsView({
         </div>
 
         {/* Card 2: Hutang Saya */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div 
+          onClick={() => setTypeFilter((prev) => (prev === "hutang" ? "semua" : "hutang"))}
+          title="Klik untuk filter Hutang Saya"
+          className={`bg-white p-5 rounded-2xl border shadow-xs flex flex-col justify-between transition cursor-pointer hover:shadow-md ${
+            typeFilter === "hutang" ? "border-rose-500 ring-2 ring-rose-100" : "border-slate-200/80 hover:border-slate-300"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">Hutang Saya (Wajib Bayar)</span>
             <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
@@ -131,7 +143,13 @@ export default function BillingsView({
         </div>
 
         {/* Card 3: Piutang Saya */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div 
+          onClick={() => setTypeFilter((prev) => (prev === "piutang" ? "semua" : "piutang"))}
+          title="Klik untuk filter Piutang Saya"
+          className={`bg-white p-5 rounded-2xl border shadow-xs flex flex-col justify-between transition cursor-pointer hover:shadow-md ${
+            typeFilter === "piutang" ? "border-emerald-500 ring-2 ring-emerald-100" : "border-slate-200/80 hover:border-slate-300"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">Piutang (Uang di Orang Lain)</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -153,15 +171,15 @@ export default function BillingsView({
       </div>
 
       {/* ========================================================
-      // 2. TOOLBAR FILTER & TOMBOL AKSI (FULL ROUNDED & GRADIENT HIJAU)
+      // 2. TOOLBAR FILTER & TOMBOL AKSI (PERSIS TARGET TABUNGAN)
       // ======================================================== */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-        {/* Status Filter Tabs (Hanya Belum Bayar & Lunas, Full Rounded, Tanpa Angka) */}
-        <div className="flex items-center p-1 bg-slate-100 rounded-full text-xs font-medium">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+        {/* Status Filter Tabs (Belum Bayar & Lunas) - Full Width Mengikuti Container di Mobile */}
+        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-full text-xs font-medium w-full sm:w-auto text-center">
           <button
             type="button"
             onClick={() => setStatusFilter("belum_bayar")}
-            className={`px-4 py-1.5 rounded-full transition-all active:scale-95 cursor-pointer ${
+            className={`py-2 px-4 rounded-full transition-all active:scale-95 cursor-pointer text-center ${
               statusFilter === "belum_bayar"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
                 : "text-slate-500 hover:text-slate-800"
@@ -172,7 +190,7 @@ export default function BillingsView({
           <button
             type="button"
             onClick={() => setStatusFilter("lunas")}
-            className={`px-4 py-1.5 rounded-full transition-all active:scale-95 cursor-pointer ${
+            className={`py-2 px-4 rounded-full transition-all active:scale-95 cursor-pointer text-center ${
               statusFilter === "lunas"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
                 : "text-slate-500 hover:text-slate-800"
@@ -182,31 +200,38 @@ export default function BillingsView({
           </button>
         </div>
 
-        {/* Right side: Type Filter & Add Button */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-slate-400">Tipe:</span>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="py-1.5 px-3 bg-slate-50 border border-slate-200 rounded-full text-slate-700 focus:outline-none focus:border-emerald-500 text-xs"
-            >
-              <option value="semua">Semua Kategori</option>
-              <option value="biasa">Tagihan Rutin</option>
-              <option value="hutang">Hutang Saya</option>
-              <option value="piutang">Piutang (Dipinjam)</option>
-            </select>
-          </div>
-
+        {/* Tombol + Tambah Tagihan - Full Width Mengikuti Container di Mobile */}
+        <div className="w-full sm:w-auto">
           <button
             type="button"
             onClick={onOpenNewBillModal}
-            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white rounded-full text-xs font-semibold transition shadow-xs hover:shadow cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white rounded-full text-xs font-semibold transition shadow-xs hover:shadow cursor-pointer text-center whitespace-nowrap"
           >
             <span>+ Tambah Tagihan</span>
           </button>
         </div>
       </div>
+
+      {/* Active Type Filter Chip Bar (Jika ada filter kategori aktif dari klik kartu statistik) */}
+      {typeFilter !== "semua" && (
+        <div className="flex items-center justify-between px-4 py-2.5 bg-white border border-slate-200/80 rounded-2xl text-xs shadow-2xs animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="text-slate-600">
+              Filter kategori aktif: <strong className="text-slate-900 font-semibold">{
+                typeFilter === "biasa" ? "Tagihan Rutin" : typeFilter === "hutang" ? "Hutang Saya" : "Piutang (Dipinjam)"
+              }</strong>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setTypeFilter("semua")}
+            className="text-emerald-600 hover:text-emerald-700 font-semibold text-xs cursor-pointer hover:underline"
+          >
+            Reset Filter
+          </button>
+        </div>
+      )}
 
       {/* ========================================================
       // 3. DAFTAR TAGIHAN (CARDS MODERN)

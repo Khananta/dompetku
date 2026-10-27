@@ -613,26 +613,16 @@ export default function InvestasiView({ isPrivateMode = false }) {
       {/* ================================================================= */}
       {viewMode === "calculator" && (
         <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <Icons.Calculator className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">Kalkulator Simulasi</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Proyeksi pertumbuhan dana dengan strategi menabung rutin (*Dollar Cost Averaging*) dan bunga majemuk
-                </p>
-              </div>
+          <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <Icons.Calculator className="w-4 h-4" />
             </div>
-
-            <button
-              type="button"
-              onClick={() => setViewMode("market")}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-emerald-600 bg-slate-100 hover:bg-slate-200 rounded-full transition cursor-pointer self-start sm:self-auto"
-            >
-              ← Kembali ke Daftar Pasar
-            </button>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Kalkulator Simulasi</h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Proyeksi pertumbuhan dana dengan strategi menabung rutin (*Dollar Cost Averaging*) dan bunga majemuk
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -783,28 +773,28 @@ export default function InvestasiView({ isPrivateMode = false }) {
             {/* Hasil Proyeksi & Timeline Milestone (Kolom Kanan 7 col) */}
             <div className="lg:col-span-7 space-y-4">
               {/* Kartu Dark Trading Style */}
-              <div className="p-6 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl shadow-sm space-y-5">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-700/80">
-                  <div>
+              <div className="p-4 sm:p-6 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl shadow-sm space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-700/80">
+                  <div className="min-w-0">
                     <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider block">
                       Proyeksi Nilai Akhir ({simYears} Tahun)
                     </span>
-                    <h2 className="text-3xl font-extrabold tracking-tight mt-1">
+                    <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 truncate">
                       {formatRupiah(simResult.futureValue, isPrivateMode)}
                     </h2>
                   </div>
-                  <div className="text-right">
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-1.5 sm:gap-1 shrink-0">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
                       +{simResult.returnPercent}% ROI
                     </span>
-                    <span className="text-[11px] text-slate-400 block mt-1">
+                    <span className="text-[11px] text-slate-400 whitespace-nowrap">
                       {simResult.multiplier}x lipat modal
                     </span>
                   </div>
                 </div>
 
-                {/* 2 Kotak Ringkasan */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* 2 Kotak Ringkasan (Atas-Bawah di Mobile, Berdampingan di Layar Lebih Besar) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="p-3.5 bg-slate-800/80 rounded-xl border border-slate-700/60">
                     <span className="text-[11px] text-slate-400 block font-medium">Total Modal Pokok</span>
                     <span className="text-base font-bold text-slate-200 block mt-1">
@@ -846,26 +836,39 @@ export default function InvestasiView({ isPrivateMode = false }) {
 
               {/* Milestone Timeline Pertumbuhan per Tahun (Informatif & Sangat Bermanfaat!) */}
               <div className="p-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl space-y-3">
-                <span className="text-xs font-bold text-slate-800 block">
-                  Perkembangan Nilai Dana per Tahun
-                </span>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-800 block">
+                    Perkembangan Nilai Dana per Tahun
+                  </span>
+                  <span className="text-[10px] text-slate-400 block sm:hidden">
+                    Geser tabel →
+                  </span>
+                </div>
+                <div className="overflow-x-auto -mx-1 px-1 overscroll-contain">
+                  <table className="w-full text-left text-xs min-w-[460px]">
                     <thead>
                       <tr className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-200">
-                        <th className="pb-2">Tahun</th>
-                        <th className="pb-2 text-right">Modal Terkumpul</th>
-                        <th className="pb-2 text-right">Total Nilai Investasi</th>
-                        <th className="pb-2 text-right">Keuntungan</th>
+                        <th className="py-2.5 pr-4 whitespace-nowrap">Tahun</th>
+                        <th className="py-2.5 px-4 text-right whitespace-nowrap">Modal Terkumpul</th>
+                        <th className="py-2.5 px-4 text-right whitespace-nowrap">Total Nilai Investasi</th>
+                        <th className="py-2.5 pl-4 text-right whitespace-nowrap">Keuntungan</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {simResult.yearlyMilestones.map((ms) => (
-                        <tr key={ms.year} className="hover:bg-white transition">
-                          <td className="py-2 font-semibold text-slate-800">Tahun ke-{ms.year}</td>
-                          <td className="py-2 text-right text-slate-600">{formatRupiah(ms.principal, isPrivateMode)}</td>
-                          <td className="py-2 text-right font-bold text-slate-900">{formatRupiah(ms.futureValue, isPrivateMode)}</td>
-                          <td className="py-2 text-right font-semibold text-emerald-600">+{formatRupiah(ms.profit, isPrivateMode)}</td>
+                        <tr key={ms.year} className="hover:bg-white/80 transition">
+                          <td className="py-2.5 pr-4 font-semibold text-slate-800 whitespace-nowrap">
+                            Tahun ke-{ms.year}
+                          </td>
+                          <td className="py-2.5 px-4 text-right text-slate-600 font-medium whitespace-nowrap">
+                            {formatRupiah(ms.principal, isPrivateMode)}
+                          </td>
+                          <td className="py-2.5 px-4 text-right font-bold text-slate-900 whitespace-nowrap">
+                            {formatRupiah(ms.futureValue, isPrivateMode)}
+                          </td>
+                          <td className="py-2.5 pl-4 text-right font-semibold text-emerald-600 whitespace-nowrap">
+                            +{formatRupiah(ms.profit, isPrivateMode)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

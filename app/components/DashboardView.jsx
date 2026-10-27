@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -162,6 +162,18 @@ export default function DashboardView({
     });
   };
 
+  // Deteksi layar mobile untuk optimasi chart & layout
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const isTodayDate = (dateStr) => {
     if (!dateStr) return false;
     const d = new Date(dateStr);
@@ -172,6 +184,21 @@ export default function DashboardView({
       d.getFullYear() === today.getFullYear()
     );
   };
+
+  // Transaksi hari ini & total pengeluaran hari ini
+  const todayTransactions = useMemo(() => {
+    return transactions.filter((t) => isTodayDate(t.created_at || t.date));
+  }, [transactions]);
+
+  const todayExpense = useMemo(() => {
+    return todayTransactions
+      .filter((t) => t.type === "pengeluaran")
+      .reduce((sum, t) => sum + Math.round(Number(t.amount)), 0);
+  }, [todayTransactions]);
+
+  const todayExpenseCount = useMemo(() => {
+    return todayTransactions.filter((t) => t.type === "pengeluaran").length;
+  }, [todayTransactions]);
 
   const isYesterdayDate = (dateStr) => {
     if (!dateStr) return false;
@@ -312,6 +339,33 @@ export default function DashboardView({
       // 1. STATS CARDS ROW
       // ======================================================== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card Pengeluaran Hari Ini (Paling Kiri di Desktop, Paling Atas di Mobile) */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Pengeluaran Hari Ini</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Icons.Calendar className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+              {formatRupiah(todayExpense, isPrivateMode)}
+            </h2>
+            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-500">
+              {todayExpenseCount > 0 ? (
+                <>
+                  <span className="text-amber-600 font-semibold">
+                    {todayExpenseCount} Transaksi
+                  </span>
+                  <span>keluar hari ini</span>
+                </>
+              ) : (
+                <span className="text-slate-400">Belum ada pengeluaran hari ini</span>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Card Saldo Bulan Ini (Uang Per Bulan) */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
@@ -375,64 +429,6 @@ export default function DashboardView({
             </div>
           </div>
         </div>
-
-        {/* Card Batas Anggaran Bulanan */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Batas Anggaran</span>
-            <button
-              onClick={() => onNavigateTab("settings")}
-              className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700"
-            >
-              Atur Limit
-            </button>
-          </div>
-
-          {budgetLimitNum > 0 ? (
-            <div className="mt-3">
-              <div className="flex items-baseline justify-between mb-1.5">
-                <span className="text-base font-bold text-slate-900">
-                  {budgetUsagePercent}%
-                </span>
-                <span className="text-[11px] text-slate-400">
-                  dari {formatRupiah(budgetLimitNum, isPrivateMode)}
-                </span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-300 ${
-                    isOverBudget
-                      ? "bg-rose-500"
-                      : budgetUsagePercent > 80
-                      ? "bg-amber-500"
-                      : "bg-emerald-500"
-                  }`}
-                  style={{ width: `${Math.min(100, budgetUsagePercent)}%` }}
-                />
-              </div>
-              <p className="text-[10px] text-slate-400 mt-2">
-                {isOverBudget ? (
-                  <span className="text-rose-600 font-semibold">Perhatian: Melebihi batas anggaran!</span>
-                ) : (
-                  `Tersisa ${formatRupiah(Math.max(0, budgetLimitNum - monthExpense), isPrivateMode)}`
-                )}
-              </p>
-            </div>
-          ) : (
-            <>
-              <p className="text-xs text-slate-400 my-auto py-2.5">Belum ada limit bulanan</p>
-              <div>
-                <button
-                  onClick={() => onNavigateTab("settings")}
-                  className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white text-xs font-medium rounded-full shadow-xs hover:shadow transition cursor-pointer"
-                >
-                  <Icons.Plus className="w-3.5 h-3.5" />
-                  <span>Pasang Limit</span>
-                </button>
-              </div>
-            </>
-          )}
-        </div>
       </div>
 
       {/* ========================================================
@@ -440,25 +436,38 @@ export default function DashboardView({
       // ======================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Money Flow Chart */}
-        <div className="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900">Arus Kas Keuangan</h3>
-              <p className="text-xs text-slate-400">Pemasukan vs Pengeluaran 6 Bulan Terakhir</p>
+        <div className="lg:col-span-2 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-2 mb-5 sm:mb-6">
+            <div className="min-w-0 pr-1">
+              <h3 className="text-sm font-semibold text-slate-900 tracking-tight">Arus Kas Keuangan</h3>
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate sm:whitespace-normal">Pemasukan vs Pengeluaran 6 Bulan Terakhir</p>
             </div>
-            <div className="flex items-center gap-3 text-xs">
-              <span className="flex items-center gap-1.5 text-slate-500">
-                <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600" /> Pemasukan
+            <div className="flex items-center gap-1.5 sm:gap-3 text-xs shrink-0">
+              <span
+                className="flex items-center gap-1.5 text-slate-600 bg-emerald-50/80 sm:bg-transparent px-2 py-1 sm:p-0 rounded-full border border-emerald-100 sm:border-0"
+                title="Pemasukan"
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 shrink-0" />
+                <span className="hidden sm:inline text-slate-500">Pemasukan</span>
               </span>
-              <span className="flex items-center gap-1.5 text-slate-500">
-                <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-rose-400 to-rose-600" /> Pengeluaran
+              <span
+                className="flex items-center gap-1.5 text-slate-600 bg-rose-50/80 sm:bg-transparent px-2 py-1 sm:p-0 rounded-full border border-rose-100 sm:border-0"
+                title="Pengeluaran"
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-rose-400 to-rose-600 shrink-0" />
+                <span className="hidden sm:inline text-slate-500">Pengeluaran</span>
               </span>
             </div>
           </div>
 
-          <div className="h-64 w-full">
+          <div className="h-60 sm:h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={moneyFlowData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={6}>
+              <BarChart
+                data={moneyFlowData}
+                margin={{ top: 10, right: 8, left: isMobile ? -25 : -15, bottom: 0 }}
+                barGap={isMobile ? 2 : 5}
+                barCategoryGap={isMobile ? "28%" : "20%"}
+              >
                 <defs>
                   <linearGradient id="pemasukanGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#10b981" />
@@ -493,8 +502,18 @@ export default function DashboardView({
                     fontSize: "12px",
                   }}
                 />
-                <Bar dataKey="Pemasukan" fill="url(#pemasukanGradient)" radius={[10, 10, 10, 10]} barSize={20} />
-                <Bar dataKey="Pengeluaran" fill="url(#pengeluaranGradient)" radius={[10, 10, 10, 10]} barSize={20} />
+                <Bar
+                  dataKey="Pemasukan"
+                  fill="url(#pemasukanGradient)"
+                  radius={[6, 6, 6, 6]}
+                  barSize={isMobile ? 9 : 18}
+                />
+                <Bar
+                  dataKey="Pengeluaran"
+                  fill="url(#pengeluaranGradient)"
+                  radius={[6, 6, 6, 6]}
+                  barSize={isMobile ? 9 : 18}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -649,7 +668,7 @@ export default function DashboardView({
                               key={tx.id}
                               className="py-2.5 flex items-center justify-between gap-3 group hover:bg-slate-50/70 px-2 rounded-xl transition"
                             >
-                              <div className="flex items-center gap-3 min-w-0">
+                              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                                 <div
                                   className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                                     isExpense
@@ -663,9 +682,9 @@ export default function DashboardView({
                                     <Icons.TrendingUp className="w-4 h-4" />
                                   )}
                                 </div>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <p className="text-xs font-semibold text-slate-800 truncate">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-x-1.5 gap-y-1 flex-wrap">
+                                    <p className="text-xs font-semibold text-slate-800 truncate max-w-[140px] sm:max-w-none">
                                       {tx.note || tx.category}
                                     </p>
                                     <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 shrink-0">
@@ -675,7 +694,7 @@ export default function DashboardView({
                                       {getPaymentMethodInfo(tx.payment_method).short}
                                     </span>
                                   </div>
-                                  <p className="text-[11px] text-slate-400">
+                                  <p className="text-[11px] text-slate-400 mt-1.5 sm:mt-1">
                                     Pukul {formattedTime}
                                   </p>
                                 </div>

@@ -356,53 +356,53 @@ Yuk bisa ditransfer ya! Terima kasih! 🙏`;
       {/* ========================================================
       // 2. TOOLBAR MODE SWITCHER (UNIVERSAL & FULL ROUNDED)
       // ======================================================== */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
         {/* Mode Switcher Tabs (Full Rounded & Gradient Hijau) */}
-        <div className="flex items-center p-1 bg-slate-100 rounded-full text-xs font-medium">
+        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-full text-xs font-medium w-full sm:w-auto text-center">
           <button
             type="button"
             onClick={() => setMode("itemized")}
-            className={`px-4 py-2 rounded-full transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+            className={`py-2 px-3 sm:px-4 rounded-full transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 text-center whitespace-nowrap ${
               mode === "itemized"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            <Icons.Receipt className="w-3.5 h-3.5" />
-            <span>Rincian Pesanan (Resto / Kafe)</span>
+            <Icons.Receipt className="w-3.5 h-3.5 shrink-0" />
+            <span>Rincian Pesanan</span>
           </button>
 
           <button
             type="button"
             onClick={() => setMode("simple")}
-            className={`px-4 py-2 rounded-full transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+            className={`py-2 px-3 sm:px-4 rounded-full transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 text-center whitespace-nowrap ${
               mode === "simple"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            <Icons.Users className="w-3.5 h-3.5" />
-            <span>Bagi Rata (Simpel)</span>
+            <Icons.Users className="w-3.5 h-3.5 shrink-0" />
+            <span>Bagi Rata</span>
           </button>
         </div>
 
         {/* Action Buttons: Export & Catat */}
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
           <button
             type="button"
             onClick={handleCopyWhatsApp}
-            className="px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold active:scale-95 transition cursor-pointer flex items-center gap-1.5"
+            className="w-full sm:w-auto px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold active:scale-95 transition cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap text-center"
           >
-            <Icons.Copy className="w-3.5 h-3.5" />
+            <Icons.Copy className="w-3.5 h-3.5 shrink-0" />
             <span>Salin Rincian</span>
           </button>
 
           <button
             type="button"
             onClick={handleRecordMyShare}
-            className="px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-semibold active:scale-95 transition shadow-xs cursor-pointer flex items-center gap-1.5"
+            className="w-full sm:w-auto px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-semibold active:scale-95 transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap text-center"
           >
-            <Icons.Wallet className="w-3.5 h-3.5" />
+            <Icons.Wallet className="w-3.5 h-3.5 shrink-0" />
             <span>Catat Porsi Saya</span>
           </button>
         </div>
@@ -587,16 +587,20 @@ Yuk bisa ditransfer ya! Terima kasih! 🙏`;
 
           {/* Cards Daftar Anggota & Pesanan Masing-Masing */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Daftar Pesanan per Orang</h3>
-                <p className="text-xs text-slate-400">Masukkan makanan & minuman yang dipesan masing-masing orang</p>
+            <div className="flex items-center justify-between gap-3 min-w-0">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">
+                  Daftar Pesanan per Orang
+                </h3>
+                <p className="text-xs text-slate-400 hidden sm:block">
+                  Masukkan makanan & minuman yang dipesan masing-masing orang
+                </p>
               </div>
               {/* Tombol Tambah Orang (Satu Tanda Plus, Full Rounded & Gradient Hijau) */}
               <button
                 type="button"
                 onClick={addMember}
-                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white rounded-full text-xs font-semibold transition shadow-xs cursor-pointer"
+                className="inline-flex items-center justify-center px-3.5 sm:px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white rounded-full text-xs font-semibold transition shadow-xs cursor-pointer shrink-0 whitespace-nowrap"
               >
                 <span>+ Tambah Orang</span>
               </button>

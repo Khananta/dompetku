@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatRupiah } from "./utils";
 import { Icons } from "./Icons";
@@ -8,6 +8,16 @@ import { Icons } from "./Icons";
 export default function CalculatorView({ isPrivateMode }) {
   const [activeTab, setActiveTab] = useState("emergency"); // "emergency" | "compound" | "budget503020" | "dsr"
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+
+  useEffect(() => {
+    if (isHelpOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isHelpOpen]);
 
   // ==========================================
   // 1. DANA DARURAT (DEFAULT KOSONG)
@@ -143,70 +153,72 @@ export default function CalculatorView({ isPrivateMode }) {
       // 1. TOOLBAR TABS & BUTTON HELP
       // ======================================================== */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-        {/* Tab Buttons (Full Rounded & Gradient Hijau) */}
-        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-full text-xs font-medium w-full sm:w-max">
+        {/* Tab Buttons: Grid 2x2 rapi & simetris di mobile, horizontal pill di desktop */}
+        <div className="grid grid-cols-2 gap-1.5 p-1.5 bg-slate-100 rounded-2xl sm:rounded-full sm:flex sm:items-center sm:p-1 text-xs font-medium w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setActiveTab("emergency")}
-            className={`px-4 py-2 rounded-full transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+            className={`w-full sm:w-auto px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl sm:rounded-full transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap text-center ${
               activeTab === "emergency"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            <Icons.Shield className="w-3.5 h-3.5" />
+            <Icons.Shield className="w-3.5 h-3.5 shrink-0" />
             <span>Dana Darurat</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("compound")}
-            className={`px-4 py-2 rounded-full transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+            className={`w-full sm:w-auto px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl sm:rounded-full transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap text-center ${
               activeTab === "compound"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            <Icons.TrendingUp className="w-3.5 h-3.5" />
+            <Icons.TrendingUp className="w-3.5 h-3.5 shrink-0" />
             <span>Bunga Majemuk</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("budget503020")}
-            className={`px-4 py-2 rounded-full transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+            className={`w-full sm:w-auto px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl sm:rounded-full transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap text-center ${
               activeTab === "budget503020"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            <Icons.ChartPie className="w-3.5 h-3.5" />
+            <Icons.ChartPie className="w-3.5 h-3.5 shrink-0" />
             <span>Aturan 50/30/20</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("dsr")}
-            className={`px-4 py-2 rounded-full transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+            className={`w-full sm:w-auto px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl sm:rounded-full transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap text-center ${
               activeTab === "dsr"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-xs"
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            <Icons.Calculator className="w-3.5 h-3.5" />
+            <Icons.Calculator className="w-3.5 h-3.5 shrink-0" />
             <span>Batas Cicilan (DSR)</span>
           </button>
         </div>
 
-        {/* Button Help */}
-        <button
-          type="button"
-          onClick={() => setIsHelpOpen(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-semibold transition cursor-pointer self-start sm:self-auto"
-        >
-          <Icons.HelpCircle className="w-4 h-4 text-emerald-600" />
-          <span>Help & Panduan</span>
-        </button>
+        {/* Button Help: Full width di mobile, auto di desktop */}
+        <div className="w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setIsHelpOpen(true)}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 rounded-xl sm:rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-semibold transition cursor-pointer text-center"
+          >
+            <Icons.HelpCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Help & Panduan</span>
+          </button>
+        </div>
       </div>
 
       {/* ========================================================
@@ -781,18 +793,22 @@ export default function CalculatorView({ isPrivateMode }) {
       // ======================================================== */}
       <AnimatePresence>
         {isHelpOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div 
+            onClick={() => setIsHelpOpen(false)}
+            className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-slate-900/60 backdrop-blur-sm overscroll-contain touch-none"
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="bg-white rounded-3xl border border-slate-200/90 shadow-xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85dvh] isolate overscroll-contain"
             >
               {/* Header Modal */}
-              <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
                     <Icons.HelpCircle className="w-4 h-4" />
                   </div>
                   <div>
@@ -803,9 +819,9 @@ export default function CalculatorView({ isPrivateMode }) {
                 <button
                   type="button"
                   onClick={() => setIsHelpOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                  className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition cursor-pointer"
                 >
-                  ✕
+                  <Icons.X className="w-4 h-4" />
                 </button>
               </div>
 
